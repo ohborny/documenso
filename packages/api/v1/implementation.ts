@@ -1062,12 +1062,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
         },
       };
     } catch (err) {
-      return {
-        status: 500,
-        body: {
-          message: 'An error has occured while resending the document',
-        },
-      };
+      return AppError.toRestAPIError(err);
     }
   }),
 
