@@ -23,6 +23,7 @@ export enum AppErrorCode {
   TOO_MANY_REQUESTS = 'TOO_MANY_REQUESTS',
   TWO_FACTOR_AUTH_FAILED = 'TWO_FACTOR_AUTH_FAILED',
   WEBHOOK_INVALID_REQUEST = 'WEBHOOK_INVALID_REQUEST',
+  ORGANISATION_EMAILS_DISABLED = 'ORGANISATION_EMAILS_DISABLED',
   ENVELOPE_DRAFT = 'ENVELOPE_DRAFT',
   ENVELOPE_COMPLETED = 'ENVELOPE_COMPLETED',
   ENVELOPE_REJECTED = 'ENVELOPE_REJECTED',
@@ -46,6 +47,7 @@ export const genericErrorCodeToTrpcErrorCodeMap: Record<string, { code: string; 
   [AppErrorCode.SCHEMA_FAILED]: { code: 'INTERNAL_SERVER_ERROR', status: 500 },
   [AppErrorCode.TOO_MANY_REQUESTS]: { code: 'TOO_MANY_REQUESTS', status: 429 },
   [AppErrorCode.TWO_FACTOR_AUTH_FAILED]: { code: 'UNAUTHORIZED', status: 401 },
+  [AppErrorCode.ORGANISATION_EMAILS_DISABLED]: { code: 'FORBIDDEN', status: 403 },
   [AppErrorCode.ENVELOPE_DRAFT]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.ENVELOPE_COMPLETED]: { code: 'BAD_REQUEST', status: 400 },
   [AppErrorCode.ENVELOPE_REJECTED]: { code: 'BAD_REQUEST', status: 400 },
@@ -242,7 +244,7 @@ export class AppError extends Error {
         () => 400 as const,
       )
       .with(AppErrorCode.UNAUTHORIZED, () => 401 as const)
-      .with(AppErrorCode.FORBIDDEN, () => 403 as const)
+      .with(AppErrorCode.FORBIDDEN, AppErrorCode.ORGANISATION_EMAILS_DISABLED, () => 403 as const)
       .with(AppErrorCode.NOT_FOUND, () => 404 as const)
       .with(AppErrorCode.NOT_IMPLEMENTED, () => 501 as const)
       .otherwise(() => 500 as const);

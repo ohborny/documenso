@@ -26,6 +26,7 @@ import { isDocumentCompleted } from '../../utils/document';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { isRecipientEmailValidForSending } from '../../utils/recipients';
 import { renderEmailWithI18N } from '../../utils/render-email-with-i18n';
+import { assertEmailSendingEnabled } from '../email/assert-email-sending-enabled';
 import { buildEnvelopeEmailHeaders } from '../email/build-envelope-email-headers';
 import { getEmailContext } from '../email/get-email-context';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
@@ -169,10 +170,11 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
     meta: envelope.documentMeta,
   });
 
-  // Don't resend any emails if the organisation has email sending disabled.
-  if (user.disabled || emailsDisabled) {
+  if (user.disabled) {
     return envelope;
   }
+
+  assertEmailSendingEnabled(emailsDisabled);
 
   // Assert that there is enough quota to send the emails.
   await assertOrganisationRatesAndLimits({

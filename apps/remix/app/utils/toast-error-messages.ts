@@ -18,10 +18,16 @@ export const FAIR_USE_LIMIT_EXCEEDED_ERROR_MESSAGE = {
   description: msg`Your organisation has reached its plan's fair use limit. Please contact your organisation administrator or support to continue.`,
 };
 
+export const ORGANISATION_EMAILS_DISABLED_ERROR_MESSAGE = {
+  title: msg`Email sending disabled`,
+  description: msg`Email sending is disabled for this organisation. Please contact support if this is unexpected.`,
+};
+
 export const getDistributeErrorMessage = (code: string): ToastMessageDescriptor => {
   return match(code)
     .with('RECIPIENT_LIMIT_EXCEEDED', () => RECIPIENT_LIMIT_EXCEEDED_ERROR_MESSAGE)
     .with(AppErrorCode.TOO_MANY_REQUESTS, () => FAIR_USE_LIMIT_EXCEEDED_ERROR_MESSAGE)
+    .with(AppErrorCode.ORGANISATION_EMAILS_DISABLED, () => ORGANISATION_EMAILS_DISABLED_ERROR_MESSAGE)
     .otherwise(() => ({
       title: msg`Something went wrong`,
       description: msg`An error occurred while distributing the document.`,
@@ -32,6 +38,7 @@ export const getDirectTemplateErrorMessage = (code: string): ToastMessageDescrip
   return match(code)
     .with('RECIPIENT_LIMIT_EXCEEDED', () => RECIPIENT_LIMIT_EXCEEDED_ERROR_MESSAGE)
     .with(AppErrorCode.TOO_MANY_REQUESTS, () => FAIR_USE_LIMIT_EXCEEDED_ERROR_MESSAGE)
+    .with(AppErrorCode.ORGANISATION_EMAILS_DISABLED, () => ORGANISATION_EMAILS_DISABLED_ERROR_MESSAGE)
     .otherwise(() => ({
       title: msg`Something went wrong`,
       description: msg`We were unable to submit this document at this time. Please try again later.`,
