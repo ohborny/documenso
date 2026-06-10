@@ -41,6 +41,8 @@ import {
 import { mapSecondaryIdToTemplateId } from '../../utils/envelope';
 import { sendDocument } from '../document/send-document';
 import { validateFieldAuth } from '../document/validate-field-auth';
+import { assertEmailSendingEnabled } from '../email/assert-email-sending-enabled';
+import { getEmailContext } from '../email/get-email-context';
 import { incrementDocumentId } from '../envelope/increment-id';
 import { assertOrganisationRatesAndLimits } from '../rate-limit/assert-organisation-rates-and-limits';
 import { getTeamSettings } from '../team/get-team-settings';
@@ -212,6 +214,27 @@ export const createDocumentFromDirectTemplate = async ({
   }
 
   const derivedDocumentMeta = extractDerivedDocumentMeta(settings, directTemplateEnvelope.documentMeta);
+  const derivedEmailSettings = extractDerivedDocumentEmailSettings({
+    ...derivedDocumentMeta,
+    id: directTemplateEnvelope.documentMeta?.id ?? '',
+  });
+
+  const shouldSendRecipientSigningRequestEmail =
+    derivedEmailSettings.recipientSigningRequest &&
+    nonDirectTemplateRecipients.some((recipient) => recipient.role !== RecipientRole.CC);
+
+  if (shouldSendRecipientSigningRequestEmail) {
+    const { emailsDisabled } = await getEmailContext({
+      emailType: 'RECIPIENT',
+      source: {
+        type: 'team',
+        teamId: directTemplateEnvelope.teamId,
+      },
+      meta: derivedDocumentMeta,
+    });
+
+    assertEmailSendingEnabled(emailsDisabled);
+  }
 
   // Associate, validate and map to a query every direct template recipient field with the provided fields.
   // Only process fields that are either required or have been signed by the user
@@ -788,6 +811,10 @@ export const createDocumentFromDirectTemplate = async ({
     });
   } catch (err) {
     console.error('[CREATE_DOCUMENT_FROM_DIRECT_TEMPLATE]:', err);
+
+    if (err instanceof AppError && err.code === AppErrorCode.ORGANISATION_EMAILS_DISABLED) {
+      throw err;
+    }
 
     // Don't launch an error since the document has already been created.
     // Log and reseal as required until we configure middleware.

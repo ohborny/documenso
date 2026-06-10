@@ -15,6 +15,7 @@ interface MailChannelsAddress {
 interface MailChannelsTransportOptions {
   apiKey: string;
   endpoint: string;
+  useEnvironmentDkim: boolean;
 }
 
 /**
@@ -36,11 +37,12 @@ export class MailChannelsTransport implements Transport<SentMessageInfo> {
   }
 
   constructor(options: Partial<MailChannelsTransportOptions>) {
-    const { apiKey = '', endpoint = 'https://api.mailchannels.net/tx/v1/send' } = options;
+    const { apiKey = '', endpoint = 'https://api.mailchannels.net/tx/v1/send', useEnvironmentDkim = false } = options;
 
     this._options = {
       apiKey,
       endpoint,
+      useEnvironmentDkim,
     };
   }
 
@@ -67,6 +69,14 @@ export class MailChannelsTransport implements Transport<SentMessageInfo> {
       requestHeaders['X-Auth-Token'] = this._options.apiKey;
     }
 
+    const environmentDkim = this._options.useEnvironmentDkim
+      ? {
+          dkim_domain: env('NEXT_PRIVATE_MAILCHANNELS_DKIM_DOMAIN') || undefined,
+          dkim_selector: env('NEXT_PRIVATE_MAILCHANNELS_DKIM_SELECTOR') || undefined,
+          dkim_private_key: env('NEXT_PRIVATE_MAILCHANNELS_DKIM_PRIVATE_KEY') || undefined,
+        }
+      : {};
+
     fetch(this._options.endpoint, {
       method: 'POST',
       headers: requestHeaders,
@@ -78,9 +88,7 @@ export class MailChannelsTransport implements Transport<SentMessageInfo> {
             to: mailTo,
             cc: mailCc.length > 0 ? mailCc : undefined,
             bcc: mailBcc.length > 0 ? mailBcc : undefined,
-            dkim_domain: env('NEXT_PRIVATE_MAILCHANNELS_DKIM_DOMAIN') || undefined,
-            dkim_selector: env('NEXT_PRIVATE_MAILCHANNELS_DKIM_SELECTOR') || undefined,
-            dkim_private_key: env('NEXT_PRIVATE_MAILCHANNELS_DKIM_PRIVATE_KEY') || undefined,
+            ...environmentDkim,
           },
         ],
         content: [

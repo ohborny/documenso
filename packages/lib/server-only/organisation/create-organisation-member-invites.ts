@@ -20,6 +20,7 @@ import { generateDatabaseId } from '../../universal/id';
 import { validateIfSubscriptionIsRequired } from '../../utils/billing';
 import { buildOrganisationWhereQuery } from '../../utils/organisations';
 import { renderEmailWithI18N } from '../../utils/render-email-with-i18n';
+import { assertEmailSendingEnabled } from '../email/assert-email-sending-enabled';
 import { getEmailContext } from '../email/get-email-context';
 import { getMemberOrganisationRole } from '../team/get-member-roles';
 
@@ -120,6 +121,18 @@ export const createOrganisationMemberInvites = async ({
     }),
   );
 
+  if (organisationMemberInvites.length > 0) {
+    const { emailsDisabled } = await getEmailContext({
+      emailType: 'INTERNAL',
+      source: {
+        type: 'organisation',
+        organisationId,
+      },
+    });
+
+    assertEmailSendingEnabled(emailsDisabled);
+  }
+
   const numberOfCurrentMembers = organisation.members.length;
   const numberOfCurrentInvites = organisation.invites.length;
   const numberOfNewInvites = organisationMemberInvites.length;
@@ -194,11 +207,7 @@ export const sendOrganisationMemberInviteEmail = async ({
     },
   });
 
-  // Member invites can be sent to anyone, so block them when the organisation has email
-  // sending disabled.
-  if (emailsDisabled) {
-    return;
-  }
+  assertEmailSendingEnabled(emailsDisabled);
 
   const [html, text] = await Promise.all([
     renderEmailWithI18N(template, {

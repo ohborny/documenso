@@ -37,6 +37,8 @@ import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import { type EnvelopeIdOptions, mapSecondaryIdToDocumentId } from '../../utils/envelope';
 import { toCheckboxCustomText, toRadioCustomText } from '../../utils/fields';
 import { getRecipientsWithMissingFields, isRecipientEmailValidForSending } from '../../utils/recipients';
+import { assertEmailSendingEnabled } from '../email/assert-email-sending-enabled';
+import { getEmailContext } from '../email/get-email-context';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { insertFormValuesInPdf } from '../pdf/insert-form-values-in-pdf';
 import { assertUserNotDisabledById } from '../user/assert-user-not-disabled';
@@ -139,6 +141,37 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
     throw new Error('Missing envelope items');
   }
 
+  const allRecipientsHaveNoActionToTake = envelope.recipients.every(
+    (recipient) => recipient.role === RecipientRole.CC || recipient.signingStatus === SigningStatus.SIGNED,
+  );
+
+  const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
+    envelope.documentMeta,
+  ).recipientSigningRequest;
+
+  // Only send email if one of the following is true:
+  // - It is explicitly set
+  // - The email is enabled for signing requests AND sendEmail is undefined
+  const shouldSendRecipientSigningRequestEmail =
+    sendEmail || (isRecipientSigningRequestEmailEnabled && sendEmail === undefined);
+
+  const hasRecipientsToNotify = recipientsToNotify.some(
+    (recipient) => recipient.sendStatus !== SendStatus.SENT && recipient.role !== RecipientRole.CC,
+  );
+
+  if (shouldSendRecipientSigningRequestEmail && hasRecipientsToNotify && !allRecipientsHaveNoActionToTake) {
+    const { emailsDisabled } = await getEmailContext({
+      emailType: 'RECIPIENT',
+      source: {
+        type: 'team',
+        teamId: envelope.teamId,
+      },
+      meta: envelope.documentMeta,
+    });
+
+    assertEmailSendingEnabled(emailsDisabled);
+  }
+
   if (envelope.formValues) {
     await Promise.all(
       envelope.envelopeItems.map(async (envelopeItem) => {
@@ -177,10 +210,6 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
       message: `The following recipients are missing required fields: ${missingRecipientDescriptions}. Signers must have at least one signature field.`,
     });
   }
-
-  const allRecipientsHaveNoActionToTake = envelope.recipients.every(
-    (recipient) => recipient.role === RecipientRole.CC || recipient.signingStatus === SigningStatus.SIGNED,
-  );
 
   if (allRecipientsHaveNoActionToTake) {
     await jobs.triggerJob({
@@ -305,14 +334,7 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
     });
   });
 
-  const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
-    envelope.documentMeta,
-  ).recipientSigningRequest;
-
-  // Only send email if one of the following is true:
-  // - It is explicitly set
-  // - The email is enabled for signing requests AND sendEmail is undefined
-  if (sendEmail || (isRecipientSigningRequestEmailEnabled && sendEmail === undefined)) {
+  if (shouldSendRecipientSigningRequestEmail) {
     await Promise.all(
       recipientsToNotify.map(async (recipient) => {
         if (recipient.sendStatus === SendStatus.SENT || recipient.role === RecipientRole.CC) {

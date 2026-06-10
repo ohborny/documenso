@@ -58,6 +58,7 @@ const getTransport = (): Transporter => {
       MailChannelsTransport.makeTransport({
         apiKey: env('NEXT_PRIVATE_MAILCHANNELS_API_KEY'),
         endpoint: env('NEXT_PRIVATE_MAILCHANNELS_ENDPOINT'),
+        useEnvironmentDkim: true,
       }),
     );
   }
