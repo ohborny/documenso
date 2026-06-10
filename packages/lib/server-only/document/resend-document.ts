@@ -118,30 +118,12 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
     });
   }
 
-  // Refresh the expiresAt on each resent recipient.
-  const expiresAt = resolveExpiresAt(envelope.documentMeta?.envelopeExpirationPeriod ?? null);
-
   const recipientsToRemind = envelope.recipients.filter(
     (recipient) =>
       recipients.includes(recipient.id) &&
       recipient.signingStatus === SigningStatus.NOT_SIGNED &&
       recipient.role !== RecipientRole.CC,
   );
-
-  // Extend the expiration deadline for recipients being resent.
-  if (expiresAt && recipientsToRemind.length > 0) {
-    await prisma.recipient.updateMany({
-      where: {
-        id: {
-          in: recipientsToRemind.map((r) => r.id),
-        },
-      },
-      data: {
-        expiresAt,
-        expirationNotifiedAt: null,
-      },
-    });
-  }
 
   const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
     envelope.documentMeta,
@@ -175,6 +157,24 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
   }
 
   assertEmailSendingEnabled(emailsDisabled);
+
+  // Refresh the expiresAt on each resent recipient.
+  const expiresAt = resolveExpiresAt(envelope.documentMeta?.envelopeExpirationPeriod ?? null);
+
+  // Extend the expiration deadline for recipients being resent.
+  if (expiresAt && recipientsToRemind.length > 0) {
+    await prisma.recipient.updateMany({
+      where: {
+        id: {
+          in: recipientsToRemind.map((r) => r.id),
+        },
+      },
+      data: {
+        expiresAt,
+        expirationNotifiedAt: null,
+      },
+    });
+  }
 
   // Assert that there is enough quota to send the emails.
   await assertOrganisationRatesAndLimits({

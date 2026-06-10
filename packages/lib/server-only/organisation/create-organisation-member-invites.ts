@@ -121,6 +121,18 @@ export const createOrganisationMemberInvites = async ({
     }),
   );
 
+  if (organisationMemberInvites.length > 0) {
+    const { emailsDisabled } = await getEmailContext({
+      emailType: 'INTERNAL',
+      source: {
+        type: 'organisation',
+        organisationId,
+      },
+    });
+
+    assertEmailSendingEnabled(emailsDisabled);
+  }
+
   const numberOfCurrentMembers = organisation.members.length;
   const numberOfCurrentInvites = organisation.invites.length;
   const numberOfNewInvites = organisationMemberInvites.length;

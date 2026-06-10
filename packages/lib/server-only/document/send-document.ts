@@ -141,6 +141,37 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
     throw new Error('Missing envelope items');
   }
 
+  const allRecipientsHaveNoActionToTake = envelope.recipients.every(
+    (recipient) => recipient.role === RecipientRole.CC || recipient.signingStatus === SigningStatus.SIGNED,
+  );
+
+  const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
+    envelope.documentMeta,
+  ).recipientSigningRequest;
+
+  // Only send email if one of the following is true:
+  // - It is explicitly set
+  // - The email is enabled for signing requests AND sendEmail is undefined
+  const shouldSendRecipientSigningRequestEmail =
+    sendEmail || (isRecipientSigningRequestEmailEnabled && sendEmail === undefined);
+
+  const hasRecipientsToNotify = recipientsToNotify.some(
+    (recipient) => recipient.sendStatus !== SendStatus.SENT && recipient.role !== RecipientRole.CC,
+  );
+
+  if (shouldSendRecipientSigningRequestEmail && hasRecipientsToNotify && !allRecipientsHaveNoActionToTake) {
+    const { emailsDisabled } = await getEmailContext({
+      emailType: 'RECIPIENT',
+      source: {
+        type: 'team',
+        teamId: envelope.teamId,
+      },
+      meta: envelope.documentMeta,
+    });
+
+    assertEmailSendingEnabled(emailsDisabled);
+  }
+
   if (envelope.formValues) {
     await Promise.all(
       envelope.envelopeItems.map(async (envelopeItem) => {
@@ -180,10 +211,6 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
     });
   }
 
-  const allRecipientsHaveNoActionToTake = envelope.recipients.every(
-    (recipient) => recipient.role === RecipientRole.CC || recipient.signingStatus === SigningStatus.SIGNED,
-  );
-
   if (allRecipientsHaveNoActionToTake) {
     await jobs.triggerJob({
       name: 'internal.seal-document',
@@ -203,33 +230,6 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
         recipients: true,
       },
     });
-  }
-
-  const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
-    envelope.documentMeta,
-  ).recipientSigningRequest;
-
-  // Only send email if one of the following is true:
-  // - It is explicitly set
-  // - The email is enabled for signing requests AND sendEmail is undefined
-  const shouldSendRecipientSigningRequestEmail =
-    sendEmail || (isRecipientSigningRequestEmailEnabled && sendEmail === undefined);
-
-  const hasRecipientsToNotify = recipientsToNotify.some(
-    (recipient) => recipient.sendStatus !== SendStatus.SENT && recipient.role !== RecipientRole.CC,
-  );
-
-  if (shouldSendRecipientSigningRequestEmail && hasRecipientsToNotify) {
-    const { emailsDisabled } = await getEmailContext({
-      emailType: 'RECIPIENT',
-      source: {
-        type: 'team',
-        teamId: envelope.teamId,
-      },
-      meta: envelope.documentMeta,
-    });
-
-    assertEmailSendingEnabled(emailsDisabled);
   }
 
   const fieldsToAutoInsert: { fieldId: number; customText: string }[] = [];
