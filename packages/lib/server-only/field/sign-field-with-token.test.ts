@@ -25,6 +25,38 @@ vi.mock('@documenso/prisma', () => ({
   },
 }));
 
+vi.mock('@prisma/client', () => ({
+  DocumentSource: {
+    DOCUMENT: 'DOCUMENT',
+    TEMPLATE: 'TEMPLATE',
+    TEMPLATE_DIRECT_LINK: 'TEMPLATE_DIRECT_LINK',
+  },
+  DocumentStatus: {
+    PENDING: 'PENDING',
+  },
+  FieldType: {
+    CHECKBOX: 'CHECKBOX',
+    DATE: 'DATE',
+    DROPDOWN: 'DROPDOWN',
+    EMAIL: 'EMAIL',
+    FREE_SIGNATURE: 'FREE_SIGNATURE',
+    INITIALS: 'INITIALS',
+    NAME: 'NAME',
+    NUMBER: 'NUMBER',
+    RADIO: 'RADIO',
+    SIGNATURE: 'SIGNATURE',
+    TEXT: 'TEXT',
+  },
+  RecipientRole: {
+    ASSISTANT: 'ASSISTANT',
+    SIGNER: 'SIGNER',
+  },
+  SigningStatus: {
+    NOT_SIGNED: 'NOT_SIGNED',
+    SIGNED: 'SIGNED',
+  },
+}));
+
 vi.mock('../../utils/document-audit-logs', () => ({
   createDocumentAuditLogData: mocks.createDocumentAuditLogData,
 }));

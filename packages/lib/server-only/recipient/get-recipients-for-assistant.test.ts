@@ -14,6 +14,12 @@ vi.mock('@documenso/prisma', () => ({
   },
 }));
 
+vi.mock('@prisma/client', () => ({
+  FieldType: {
+    SIGNATURE: 'SIGNATURE',
+  },
+}));
+
 const recipientFindFirstMock = vi.mocked(prisma.recipient.findFirst);
 const recipientFindManyMock = vi.mocked(prisma.recipient.findMany);
 
