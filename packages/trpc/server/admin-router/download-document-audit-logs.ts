@@ -1,6 +1,8 @@
 import { PDF_SIZE_A4_72PPI } from '@documenso/lib/constants/pdf';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { generateAuditLogPdf } from '@documenso/lib/server-only/pdf/generate-audit-log-pdf';
+import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
+import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { unsafeBuildEnvelopeIdQuery } from '@documenso/lib/utils/envelope';
 import { prisma } from '@documenso/prisma';
 import { EnvelopeType } from '@prisma/client';
@@ -73,6 +75,18 @@ export const downloadDocumentAuditLogsRoute = adminProcedure
     const result = await auditLogPdf.save();
 
     const base64 = Buffer.from(result).toString('base64');
+
+    await prisma.documentAuditLog.create({
+      data: createDocumentAuditLogData({
+        envelopeId: envelope.id,
+        type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_AUDIT_LOG_EXPORTED,
+        data: {
+          format: 'PDF',
+        },
+        user: ctx.user,
+        metadata: ctx.metadata,
+      }),
+    });
 
     return {
       data: base64,

@@ -105,6 +105,7 @@ enum UserSecurityAuditLogType {
   SIGN_IN_FAIL
   SIGN_IN_2FA_FAIL
   SIGN_IN_PASSKEY_FAIL
+  AUDIT_LOG_EXPORTED
 }
 
 model UserSecurityAuditLog {

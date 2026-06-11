@@ -17,6 +17,7 @@ import { findEmailTransportsRoute } from './email-transport/find-email-transport
 import { sendTestEmailTransportRoute } from './email-transport/send-test-email-transport';
 import { updateEmailTransportRoute } from './email-transport/update-email-transport';
 import { enableUserRoute } from './enable-user';
+import { exportAuditLogsRoute } from './export-audit-logs';
 import { findAdminOrganisationsRoute } from './find-admin-organisations';
 import { findDocumentAuditLogsRoute } from './find-document-audit-logs';
 import { findDocumentJobsRoute } from './find-document-jobs';
@@ -77,6 +78,9 @@ export const adminRouter = router({
   },
   license: {
     resync: resyncLicenseRoute,
+  },
+  auditLog: {
+    export: exportAuditLogsRoute,
   },
   user: {
     get: getUserRoute,
