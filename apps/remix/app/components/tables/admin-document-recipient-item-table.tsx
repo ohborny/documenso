@@ -89,7 +89,7 @@ export const AdminDocumentRecipientItemTable = ({ recipient }: RecipientItemProp
             {row.original.signature?.signatureImageAsBase64 && (
               <img
                 src={row.original.signature.signatureImageAsBase64}
-                alt="Signature"
+                alt={_(msg`Signature`)}
                 className="h-12 w-full dark:invert"
               />
             )}

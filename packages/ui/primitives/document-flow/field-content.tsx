@@ -1,6 +1,7 @@
 import { convertToLocalSystemFormat, DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
 import type { TFieldMetaSchema } from '@documenso/lib/types/field-meta';
 import { fromCheckboxValue } from '@documenso/lib/universal/field-checkbox';
+import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
 import type { DocumentMeta, Signature } from '@prisma/client';
@@ -137,7 +138,7 @@ export const FieldContent = ({ field, documentMeta }: FieldIconProps) => {
 
   if (field.type === FieldType.SIGNATURE && field.signature?.signatureImageAsBase64 && field.inserted) {
     return (
-      <img src={field.signature.signatureImageAsBase64} alt="Signature" className="h-full w-full object-contain" />
+      <img src={field.signature.signatureImageAsBase64} alt={_(msg`Signature`)} className="h-full w-full object-contain" />
     );
   }
 

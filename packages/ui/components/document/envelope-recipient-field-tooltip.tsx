@@ -182,7 +182,7 @@ export function EnvelopeRecipientFieldTooltip({
         <button
           className="absolute top-0 right-0 my-1 p-2 focus:outline-none focus-visible:ring-0"
           onClick={() => setHideField(true)}
-          title="Hide field"
+          title={t`Hide field`}
         >
           <EyeOffIcon className="h-3 w-3" />
         </button>
