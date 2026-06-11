@@ -57,3 +57,19 @@
 - Use `(params: Route.Params)` and `(loaderData: Route.LoaderData)` for routes
 - Directly return data from loaders, don't use `json()`
 - Use `superLoaderJson` when sending complex data through loaders such as dates or prisma decimals
+
+## Cursor Cloud specific instructions
+
+This is an npm-workspaces + Turborepo monorepo. The core product is the Remix web app (`@documenso/remix`) plus a Postgres database and an SMTP catcher; standard scripts live in the root `package.json` and `docker/development/compose.yml`.
+
+Node/npm: login shells use nvm Node v22.22.2 with npm 11.11.0 (the repo requires npm `>=11.11.0`). The interactive (non-login) shell may resolve a different injected `node`; prefer running commands in a login shell so node+npm stay consistent.
+
+Dependencies/`.env`: the startup update script runs `npm install` (which triggers `patch-package` and `prisma generate` via post-install hooks) and creates `.env` from `.env.example` if it is missing. The default `.env` runs background jobs in-process (`local`), stores uploads in Postgres (`database`), and signs PDFs with a local cert — so Redis, MinIO/S3, and Gotenberg are all OPTIONAL.
+
+Docker is installed but NOT auto-started (there is no systemd/init). Before starting services you must launch the daemon yourself, e.g. `sudo dockerd` in a background tmux session, then run docker via `sudo`. Start dev services with `sudo docker compose -f docker/development/compose.yml up -d database inbucket redis minio`. Skip the `gotenberg` service unless you specifically need DOCX→PDF conversion — it builds a heavy LibreOffice image.
+
+Database: migrations and seed data persist in the `documenso_database` Docker volume in the snapshot. If starting from a fresh DB, run `npm run prisma:migrate-dev` then `npm run prisma:seed`. Seeded logins are `example@documenso.com` / `password` and `admin@documenso.com` / `password` (the seed also creates ~1000 sample documents, so it takes ~20s).
+
+Run the app: `npm run dev` (serves the Remix app, tRPC, public API, and in-process jobs on port 3000). The first request triggers a Vite cold compile that can take ~30–40s before the page renders — this is expected, not a hang. View outgoing emails (signing links, etc.) in the Inbucket web UI at `http://localhost:9000` (SMTP on port 2500).
+
+Lint/test/build: `npm run lint` (Biome; emits warnings but exits 0), `npm run test:e2e` (Playwright; builds the app first, see `packages/app-tests`), `npm run build`. Per the build note above, avoid `npm run build` just to verify changes — prefer `npx tsc --noEmit` for targeted type checks.
