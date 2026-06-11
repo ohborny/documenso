@@ -49,6 +49,7 @@ export const ZDocumentAuditLogTypeSchema = z.enum([
   'DOCUMENT_EXTERNAL_ID_UPDATED', // When the document external ID is updated.
   'DOCUMENT_MOVED_TO_TEAM', // When the document is moved to a team.
   'DOCUMENT_DELEGATED_OWNER_CREATED', // When the document delegated owner is created.
+  'DOCUMENT_AUDIT_LOG_EXPORTED', // When the document audit log is exported.
 
   // ACCESS AUTH 2FA events.
   'DOCUMENT_ACCESS_AUTH_2FA_REQUESTED', // When ACCESS AUTH 2FA is requested.
@@ -286,6 +287,16 @@ export const ZDocumentAuditLogEventDocumentDeletedSchema = z.object({
   type: z.literal(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_DELETED),
   data: z.object({
     type: z.enum(['SOFT', 'HARD']),
+  }),
+});
+
+/**
+ * Event: Document audit log exported.
+ */
+export const ZDocumentAuditLogEventDocumentAuditLogExportedSchema = z.object({
+  type: z.literal(DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_AUDIT_LOG_EXPORTED),
+  data: z.object({
+    format: z.enum(['PDF']),
   }),
 });
 
@@ -743,6 +754,7 @@ export const ZDocumentAuditLogSchema = ZDocumentAuditLogBaseSchema.and(
     ZDocumentAuditLogEventDocumentCompletedSchema,
     ZDocumentAuditLogEventDocumentCreatedSchema,
     ZDocumentAuditLogEventDocumentDeletedSchema,
+    ZDocumentAuditLogEventDocumentAuditLogExportedSchema,
     ZDocumentAuditLogEventDocumentMovedToTeamSchema,
     ZDocumentAuditLogEventDocumentDelegatedOwnerCreatedSchema,
     ZDocumentAuditLogEventDocumentFieldsAutoInsertedSchema,

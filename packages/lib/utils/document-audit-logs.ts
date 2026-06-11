@@ -355,6 +355,14 @@ export const formatDocumentAuditLogAction = (i18n: I18n, auditLog: TDocumentAudi
       you: msg`You deleted the document`,
       user: msg`${user} deleted the document`,
     }))
+    .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_AUDIT_LOG_EXPORTED }, () => ({
+      anonymous: msg({
+        message: `Document audit log exported`,
+        context: `Audit log format`,
+      }),
+      you: msg`You exported the document audit log`,
+      user: msg`${user} exported the document audit log`,
+    }))
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_FIELDS_AUTO_INSERTED }, () => ({
       anonymous: msg({
         message: `System auto inserted fields`,

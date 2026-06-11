@@ -60,6 +60,7 @@ export const USER_SECURITY_AUDIT_LOG_MAP: Record<string, string> = {
   SIGN_IN_FAIL: 'Sign in attempt failed',
   SIGN_IN_PASSKEY_FAIL: 'Passkey sign in failed',
   SIGN_IN_2FA_FAIL: 'Sign in 2FA attempt failed',
+  AUDIT_LOG_EXPORTED: 'SOC2 audit logs exported',
 };
 
 /**
