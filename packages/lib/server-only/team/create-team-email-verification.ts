@@ -1,5 +1,7 @@
+import { mailer } from '@documenso/email/mailer';
 import { ConfirmTeamEmailTemplate } from '@documenso/email/templates/confirm-team-email';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { DOCUMENSO_INTERNAL_EMAIL } from '@documenso/lib/constants/email';
 import { TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createTokenVerification } from '@documenso/lib/utils/token-verification';
@@ -116,7 +118,7 @@ export const sendTeamEmailVerificationEmail = async (email: string, token: strin
     token,
   });
 
-  const { branding, emailLanguage, senderEmail, emailTransport } = await getEmailContext({
+  const { branding, emailLanguage } = await getEmailContext({
     emailType: 'INTERNAL',
     source: {
       type: 'team',
@@ -135,9 +137,10 @@ export const sendTeamEmailVerificationEmail = async (email: string, token: strin
 
   const i18n = await getI18nInstance(emailLanguage);
 
-  await emailTransport.sendMail({
+  // Verification links are bearer credentials and must not traverse organisation-owned transports.
+  await mailer.sendMail({
     to: email,
-    from: senderEmail,
+    from: DOCUMENSO_INTERNAL_EMAIL,
     subject: i18n._(msg`A request to use your email has been initiated by ${team.name} on Documenso`),
     html,
     text,
