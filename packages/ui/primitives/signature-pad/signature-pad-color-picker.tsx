@@ -1,5 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 
 import { cn } from '../../lib/utils';
 
@@ -14,10 +14,12 @@ export const SignaturePadColorPicker = ({
   setSelectedColor,
   className,
 }: SignaturePadColorPickerProps) => {
+  const { t } = useLingui();
+
   return (
     <div className={cn('absolute top-2 right-2 text-foreground filter', className)}>
       <Select defaultValue={selectedColor} onValueChange={(value) => setSelectedColor(value)}>
-        <SelectTrigger className="h-auto w-auto border-none p-0.5">
+        <SelectTrigger className="h-auto w-auto border-none p-0.5" aria-label={t`Signature color`}>
           <SelectValue placeholder="" />
         </SelectTrigger>
 

@@ -1,13 +1,13 @@
 import { unsafe_useEffectOnce } from '@documenso/lib/client-only/hooks/use-effect-once';
 import { SIGNATURE_CANVAS_DPI } from '@documenso/lib/constants/signatures';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import { motion } from 'framer-motion';
 import { UploadCloudIcon } from 'lucide-react';
 import { useRef } from 'react';
 
 import { cn } from '../../lib/utils';
 
-const loadImage = async (file: File | undefined): Promise<HTMLImageElement> => {
+const loadImage = (file: File | undefined): Promise<HTMLImageElement> => {
   if (!file) {
     throw new Error('No file selected');
   }
@@ -70,6 +70,8 @@ export type SignaturePadUploadProps = {
 };
 
 export const SignaturePadUpload = ({ className, value, onChange, ...props }: SignaturePadUploadProps) => {
+  const { t } = useLingui();
+
   const $el = useRef<HTMLCanvasElement>(null);
   const $imageData = useRef<ImageData | null>(null);
   const $fileInput = useRef<HTMLInputElement>(null);
@@ -125,14 +127,26 @@ export const SignaturePadUpload = ({ className, value, onChange, ...props }: Sig
       <canvas
         data-testid="signature-pad-upload"
         ref={$el}
+        aria-label={t`Uploaded signature preview`}
         className="h-full w-full dark:hue-rotate-180 dark:invert"
         style={{ touchAction: 'none' }}
         {...props}
+      >
+        <Trans>Uploaded signature preview.</Trans>
+      </canvas>
+
+      <input
+        ref={$fileInput}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        aria-label={t`Upload signature image`}
+        onChange={handleImageUpload}
       />
 
-      <input ref={$fileInput} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-
       <motion.button
+        type="button"
+        aria-label={t`Upload signature image`}
         className="absolute inset-0 flex h-full w-full items-center justify-center"
         initial="initial"
         animate="animate"

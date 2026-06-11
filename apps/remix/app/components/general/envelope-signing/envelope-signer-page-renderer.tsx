@@ -42,6 +42,20 @@ type GenericLocalField = TEnvelope['fields'][number] & {
   recipient: Pick<Recipient, 'id' | 'name' | 'email' | 'signingStatus'>;
 };
 
+type FieldActivationOptions = {
+  checkboxIndex?: number;
+  radioIndex?: number;
+  target?: Konva.Shape;
+  fieldGroup?: Konva.Group;
+};
+
+type FieldActivationTarget = {
+  key: string;
+  label?: string;
+  checkboxIndex?: number;
+  radioIndex?: number;
+};
+
 export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderData }) => {
   const { t, i18n } = useLingui();
   const { currentEnvelopeItem, setRenderError } = useCurrentEnvelopeRender();
@@ -92,6 +106,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
   const { scale, pageNumber } = pageData;
 
   const { envelope } = envelopeData;
+  const fieldTranslations = getClientSideFieldTranslations(i18n);
 
   const localPageFields = useMemo(() => {
     let fieldsToRender = recipientFields;
@@ -135,6 +150,295 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     });
   }, [envelope.recipients, pageNumber, currentEnvelopeItem?.id]);
 
+  const getFieldActivationLabel = (field: Field & { signature?: Signature | null }, optionLabel?: string) => {
+    const fieldLabel = field.fieldMeta?.label || fieldTranslations[field.type] || t`field`;
+
+    if (optionLabel) {
+      return t`Insert ${fieldLabel} field: ${optionLabel}`;
+    }
+
+    if (field.inserted) {
+      return t`Update ${fieldLabel} field`;
+    }
+
+    return t`Insert ${fieldLabel} field`;
+  };
+
+  const getFieldActivationTargets = (field: Field & { signature?: Signature | null }): FieldActivationTarget[] => {
+    if (field.type !== FieldType.CHECKBOX && field.type !== FieldType.RADIO) {
+      return [{ key: field.id.toString() }];
+    }
+
+    const values =
+      field.fieldMeta && 'values' in field.fieldMeta && Array.isArray(field.fieldMeta.values)
+        ? field.fieldMeta.values
+        : [];
+
+    if (values.length === 0) {
+      return [{ key: field.id.toString() }];
+    }
+
+    return values.map((value, index) => {
+      const label = typeof value.value === 'string' ? value.value : undefined;
+
+      if (field.type === FieldType.CHECKBOX) {
+        return {
+          key: `${field.id}-${index}`,
+          label,
+          checkboxIndex: index,
+        };
+      }
+
+      return {
+        key: `${field.id}-${index}`,
+        label,
+        radioIndex: index,
+      };
+    });
+  };
+
+  const activateField = (
+    unparsedField: Field & { signature?: Signature | null },
+    options: FieldActivationOptions = {},
+  ) => {
+    const currentFieldGroup =
+      options.fieldGroup || (pageLayer.current?.findOne(`#${unparsedField.id}`) as Konva.Group | undefined);
+
+    const fieldRect = currentFieldGroup?.findOne('.field-rect');
+    const fieldWidth = fieldRect ? fieldRect.width() : (currentFieldGroup?.width() ?? Number(unparsedField.width));
+    const fieldHeight = fieldRect ? fieldRect.height() : (currentFieldGroup?.height() ?? Number(unparsedField.height));
+
+    const foundField = localPageFields.find((f) => f.id === unparsedField.id);
+    const foundLoadingGroup = currentFieldGroup?.findOne('.loading-spinner-group');
+
+    if (!foundField || foundLoadingGroup || foundField.fieldMeta?.readOnly) {
+      return;
+    }
+
+    let localEmail: string | null = email.current;
+    let localFullName: string | null = fullName.current;
+    let placeholderEmail: string | null = null;
+
+    if (recipient.role === RecipientRole.ASSISTANT) {
+      localEmail = selectedAssistantRecipient?.email || null;
+      localFullName = selectedAssistantRecipient?.name || null;
+    }
+
+    // Allows us let the user set a different email than their current logged in email.
+    if (isDirectTemplate) {
+      placeholderEmail = sessionData?.user?.email || email.current || recipient.email;
+
+      if (!placeholderEmail || placeholderEmail === DIRECT_TEMPLATE_RECIPIENT_EMAIL) {
+        placeholderEmail = null;
+      }
+    }
+
+    const loadingSpinnerGroup = createSpinner({
+      fieldWidth,
+      fieldHeight,
+    });
+
+    const parsedFoundField = ZFullFieldSchema.parse(foundField);
+
+    match(parsedFoundField)
+      /**
+       * CHECKBOX FIELD.
+       */
+      .with({ type: FieldType.CHECKBOX }, (field) => {
+        const clickedCheckboxIndex = options.checkboxIndex ?? Number(options.target?.getAttr('internalCheckboxIndex'));
+
+        if (Number.isNaN(clickedCheckboxIndex)) {
+          return;
+        }
+
+        void handleCheckboxFieldClick({ field, clickedCheckboxIndex })
+          .then(async (payload) => {
+            if (payload) {
+              currentFieldGroup?.add(loadingSpinnerGroup);
+              await signField(field.id, payload);
+            }
+          })
+          .finally(() => {
+            loadingSpinnerGroup.destroy();
+          });
+      })
+      /**
+       * RADIO FIELD.
+       */
+      .with({ type: FieldType.RADIO }, (field) => {
+        const selectedRadioIndex = options.radioIndex ?? Number(options.target?.getAttr('internalRadioIndex'));
+        const fieldCustomText = Number(field.customText);
+
+        if (Number.isNaN(selectedRadioIndex)) {
+          return;
+        }
+
+        currentFieldGroup?.add(loadingSpinnerGroup);
+
+        // Uncheck the value if it's already pressed.
+        const value = field.inserted && selectedRadioIndex === fieldCustomText ? null : selectedRadioIndex;
+
+        void signField(field.id, {
+          type: FieldType.RADIO,
+          value,
+        }).finally(() => {
+          loadingSpinnerGroup.destroy();
+        });
+      })
+      /**
+       * NUMBER FIELD.
+       */
+      .with({ type: FieldType.NUMBER }, (field) => {
+        void handleNumberFieldClick({ field, number: null })
+          .then(async (payload) => {
+            if (payload) {
+              currentFieldGroup?.add(loadingSpinnerGroup);
+              await signField(field.id, payload);
+            }
+          })
+          .finally(() => {
+            loadingSpinnerGroup.destroy();
+          });
+      })
+      /**
+       * TEXT FIELD.
+       */
+      .with({ type: FieldType.TEXT }, (field) => {
+        void handleTextFieldClick({ field, text: null })
+          .then(async (payload) => {
+            if (payload) {
+              currentFieldGroup?.add(loadingSpinnerGroup);
+              await signField(field.id, payload);
+            }
+          })
+          .finally(() => {
+            loadingSpinnerGroup.destroy();
+          });
+      })
+      /**
+       * EMAIL FIELD.
+       */
+      .with({ type: FieldType.EMAIL }, (field) => {
+        void handleEmailFieldClick({ field, email: localEmail, placeholderEmail })
+          .then(async (payload) => {
+            if (payload) {
+              currentFieldGroup?.add(loadingSpinnerGroup);
+              await signField(field.id, payload);
+            }
+
+            if (payload?.value) {
+              setEmail(payload.value);
+            }
+          })
+          .finally(() => {
+            loadingSpinnerGroup.destroy();
+          });
+      })
+      /**
+       * INITIALS FIELD.
+       */
+      .with({ type: FieldType.INITIALS }, (field) => {
+        const initials = localFullName ? extractInitials(localFullName) : null;
+
+        void handleInitialsFieldClick({ field, initials })
+          .then(async (payload) => {
+            if (payload) {
+              currentFieldGroup?.add(loadingSpinnerGroup);
+              await signField(field.id, payload);
+            }
+          })
+          .finally(() => {
+            loadingSpinnerGroup.destroy();
+          });
+      })
+      /**
+       * NAME FIELD.
+       */
+      .with({ type: FieldType.NAME }, (field) => {
+        void handleNameFieldClick({ field, name: localFullName })
+          .then(async (payload) => {
+            if (payload) {
+              currentFieldGroup?.add(loadingSpinnerGroup);
+              await signField(field.id, payload);
+            }
+
+            if (payload?.value) {
+              setFullName(payload.value);
+            }
+          })
+          .finally(() => {
+            loadingSpinnerGroup.destroy();
+          });
+      })
+      /**
+       * DROPDOWN FIELD.
+       */
+      .with({ type: FieldType.DROPDOWN }, (field) => {
+        void handleDropdownFieldClick({ field, text: null })
+          .then(async (payload) => {
+            if (payload) {
+              currentFieldGroup?.add(loadingSpinnerGroup);
+              await signField(field.id, payload);
+            }
+          })
+          .finally(() => {
+            loadingSpinnerGroup.destroy();
+          });
+      })
+      /**
+       * DATE FIELD.
+       */
+      .with({ type: FieldType.DATE }, (field) => {
+        currentFieldGroup?.add(loadingSpinnerGroup);
+
+        void signField(field.id, {
+          type: FieldType.DATE,
+          value: !field.inserted,
+        }).finally(() => {
+          loadingSpinnerGroup.destroy();
+        });
+      })
+      /**
+       * SIGNATURE FIELD.
+       */
+      .with({ type: FieldType.SIGNATURE }, (field) => {
+        void handleSignatureFieldClick({
+          field,
+          fullName: fullName.current,
+          signature: signature.current,
+          typedSignatureEnabled: envelope.documentMeta.typedSignatureEnabled,
+          uploadSignatureEnabled: envelope.documentMeta.uploadSignatureEnabled,
+          drawSignatureEnabled: envelope.documentMeta.drawSignatureEnabled,
+        })
+          .then(async (payload) => {
+            if (!payload) {
+              return;
+            }
+
+            currentFieldGroup?.add(loadingSpinnerGroup);
+
+            if (payload.value) {
+              await executeActionAuthProcedure({
+                onReauthFormSubmit: async (authOptions) => {
+                  await signField(field.id, payload, authOptions);
+
+                  loadingSpinnerGroup.destroy();
+                },
+                actionTarget: field.type,
+              });
+
+              setSignature(payload.value);
+            } else {
+              await signField(field.id, payload);
+            }
+          })
+          .finally(() => {
+            loadingSpinnerGroup.destroy();
+          });
+      })
+      .exhaustive();
+  };
+
   const unsafeRenderFieldOnLayer = (unparsedField: Field & { signature?: Signature | null }) => {
     if (!pageLayer.current) {
       console.error('Layer not loaded yet');
@@ -161,7 +465,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
         positionY: Number(fieldToRender.positionY),
         signature: unparsedField.signature,
       },
-      translations: getClientSideFieldTranslations(i18n),
+      translations: fieldTranslations,
       pageWidth: unscaledViewport.width,
       pageHeight: unscaledViewport.height,
       color,
@@ -169,242 +473,10 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
     });
 
     const handleFieldGroupClick = (e: KonvaEventObject<Event>) => {
-      const currentTarget = e.currentTarget as Konva.Group;
-      const target = e.target as Konva.Shape;
-
-      const fieldRect = fieldGroup.findOne('.field-rect');
-      const fieldWidth = fieldRect ? fieldRect.width() : fieldGroup.width();
-      const fieldHeight = fieldRect ? fieldRect.height() : fieldGroup.height();
-
-      const foundField = localPageFields.find((f) => f.id === unparsedField.id);
-      const foundLoadingGroup = currentTarget.findOne('.loading-spinner-group');
-
-      if (!foundField || foundLoadingGroup || foundField.fieldMeta?.readOnly) {
-        return;
-      }
-
-      let localEmail: string | null = email.current;
-      let localFullName: string | null = fullName.current;
-      let placeholderEmail: string | null = null;
-
-      if (recipient.role === RecipientRole.ASSISTANT) {
-        localEmail = selectedAssistantRecipient?.email || null;
-        localFullName = selectedAssistantRecipient?.name || null;
-      }
-
-      // Allows us let the user set a different email than their current logged in email.
-      if (isDirectTemplate) {
-        placeholderEmail = sessionData?.user?.email || email.current || recipient.email;
-
-        if (!placeholderEmail || placeholderEmail === DIRECT_TEMPLATE_RECIPIENT_EMAIL) {
-          placeholderEmail = null;
-        }
-      }
-
-      const loadingSpinnerGroup = createSpinner({
-        fieldWidth,
-        fieldHeight,
+      void activateField(unparsedField, {
+        fieldGroup: e.currentTarget as Konva.Group,
+        target: e.target as Konva.Shape,
       });
-
-      const parsedFoundField = ZFullFieldSchema.parse(foundField);
-
-      match(parsedFoundField)
-        /**
-         * CHECKBOX FIELD.
-         */
-        .with({ type: FieldType.CHECKBOX }, (field) => {
-          const clickedCheckboxIndex = Number(target.getAttr('internalCheckboxIndex'));
-
-          if (Number.isNaN(clickedCheckboxIndex)) {
-            return;
-          }
-
-          void handleCheckboxFieldClick({ field, clickedCheckboxIndex })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
-        })
-        /**
-         * RADIO FIELD.
-         */
-        .with({ type: FieldType.RADIO }, (field) => {
-          const selectedRadioIndex = Number(target.getAttr('internalRadioIndex'));
-          const fieldCustomText = Number(field.customText);
-
-          if (Number.isNaN(selectedRadioIndex)) {
-            return;
-          }
-
-          fieldGroup.add(loadingSpinnerGroup);
-
-          // Uncheck the value if it's already pressed.
-          const value = field.inserted && selectedRadioIndex === fieldCustomText ? null : selectedRadioIndex;
-
-          void signField(field.id, {
-            type: FieldType.RADIO,
-            value,
-          }).finally(() => {
-            loadingSpinnerGroup.destroy();
-          });
-        })
-        /**
-         * NUMBER FIELD.
-         */
-        .with({ type: FieldType.NUMBER }, (field) => {
-          void handleNumberFieldClick({ field, number: null })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
-        })
-        /**
-         * TEXT FIELD.
-         */
-        .with({ type: FieldType.TEXT }, (field) => {
-          void handleTextFieldClick({ field, text: null })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
-        })
-        /**
-         * EMAIL FIELD.
-         */
-        .with({ type: FieldType.EMAIL }, (field) => {
-          void handleEmailFieldClick({ field, email: localEmail, placeholderEmail })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-
-              if (payload?.value) {
-                setEmail(payload.value);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
-        })
-        /**
-         * INITIALS FIELD.
-         */
-        .with({ type: FieldType.INITIALS }, (field) => {
-          const initials = localFullName ? extractInitials(localFullName) : null;
-
-          void handleInitialsFieldClick({ field, initials })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
-        })
-        /**
-         * NAME FIELD.
-         */
-        .with({ type: FieldType.NAME }, (field) => {
-          void handleNameFieldClick({ field, name: localFullName })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-
-              if (payload?.value) {
-                setFullName(payload.value);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
-        })
-        /**
-         * DROPDOWN FIELD.
-         */
-        .with({ type: FieldType.DROPDOWN }, (field) => {
-          void handleDropdownFieldClick({ field, text: null })
-            .then(async (payload) => {
-              if (payload) {
-                fieldGroup.add(loadingSpinnerGroup);
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
-        })
-        /**
-         * DATE FIELD.
-         */
-        .with({ type: FieldType.DATE }, (field) => {
-          fieldGroup.add(loadingSpinnerGroup);
-
-          void signField(field.id, {
-            type: FieldType.DATE,
-            value: !field.inserted,
-          }).finally(() => {
-            loadingSpinnerGroup.destroy();
-          });
-        })
-        /**
-         * SIGNATURE FIELD.
-         */
-        .with({ type: FieldType.SIGNATURE }, (field) => {
-          void handleSignatureFieldClick({
-            field,
-            fullName: fullName.current,
-            signature: signature.current,
-            typedSignatureEnabled: envelope.documentMeta.typedSignatureEnabled,
-            uploadSignatureEnabled: envelope.documentMeta.uploadSignatureEnabled,
-            drawSignatureEnabled: envelope.documentMeta.drawSignatureEnabled,
-          })
-            .then(async (payload) => {
-              if (!payload) {
-                return;
-              }
-
-              fieldGroup.add(loadingSpinnerGroup);
-
-              if (payload.value) {
-                await executeActionAuthProcedure({
-                  onReauthFormSubmit: async (authOptions) => {
-                    await signField(field.id, payload, authOptions);
-
-                    loadingSpinnerGroup.destroy();
-                  },
-                  actionTarget: field.type,
-                });
-
-                setSignature(payload.value);
-              } else {
-                await signField(field.id, payload);
-              }
-            })
-            .finally(() => {
-              loadingSpinnerGroup.destroy();
-            });
-        })
-        .exhaustive();
     };
 
     fieldGroup.off('pointerdown');
@@ -507,7 +579,7 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
   /**
    * Initialize the Konva page canvas and all fields and interactions.
    */
-  const createPageCanvas = (currentStage: Konva.Stage, currentPageLayer: Konva.Layer) => {
+  const createPageCanvas = (_currentStage: Konva.Stage, currentPageLayer: Konva.Layer) => {
     renderFields();
     currentPageLayer.batchDraw();
   };
@@ -578,6 +650,33 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
           showRecipientTooltip={true}
         />
       ))}
+
+      {localPageFields
+        .filter((field) => !field.fieldMeta?.readOnly)
+        .flatMap((field) =>
+          getFieldActivationTargets(field).map((target) => (
+            <button
+              key={`field-activation-${target.key}`}
+              type="button"
+              className="pointer-events-none absolute z-20 rounded-[2px] border-2 border-transparent bg-transparent text-transparent focus-visible:border-ring focus-visible:bg-background/80 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              style={{
+                left: `${Number(field.positionX)}%`,
+                top: `${Number(field.positionY)}%`,
+                width: `${Number(field.width)}%`,
+                height: `${Number(field.height)}%`,
+              }}
+              aria-label={getFieldActivationLabel(field, target.label)}
+              aria-pressed={field.inserted || undefined}
+              data-testid={`signing-field-activation-${field.id}`}
+              onClick={() => {
+                void activateField(field, {
+                  checkboxIndex: target.checkboxIndex,
+                  radioIndex: target.radioIndex,
+                });
+              }}
+            />
+          )),
+        )}
 
       {/* The element Konva will inject it's canvas into. */}
       <div className="konva-container absolute inset-0 z-10 w-full" ref={konvaContainer}></div>

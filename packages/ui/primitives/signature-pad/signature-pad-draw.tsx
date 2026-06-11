@@ -1,7 +1,7 @@
 import { unsafe_useEffectOnce } from '@documenso/lib/client-only/hooks/use-effect-once';
 import { SIGNATURE_CANVAS_DPI, SIGNATURE_MIN_COVERAGE_THRESHOLD } from '@documenso/lib/constants/signatures';
 
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import { Undo2 } from 'lucide-react';
 import type { StrokeOptions } from 'perfect-freehand';
 import { getStroke } from 'perfect-freehand';
@@ -48,6 +48,8 @@ export type SignaturePadDrawProps = {
 };
 
 export const SignaturePadDraw = ({ className, value, onChange, ...props }: SignaturePadDrawProps) => {
+  const { t } = useLingui();
+
   const $el = useRef<HTMLCanvasElement>(null);
 
   const $imageData = useRef<ImageData | null>(null);
@@ -264,6 +266,7 @@ export const SignaturePadDraw = ({ className, value, onChange, ...props }: Signa
       <canvas
         data-testid="signature-pad-draw"
         ref={$el}
+        aria-label={t`Draw your signature`}
         className={cn('h-full w-full', {
           'dark:hue-rotate-180 dark:invert': selectedColor === 'black',
         })}
@@ -274,7 +277,9 @@ export const SignaturePadDraw = ({ className, value, onChange, ...props }: Signa
         onPointerLeave={(event) => onMouseLeave(event)}
         onPointerEnter={(event) => onMouseEnter(event)}
         {...props}
-      />
+      >
+        <Trans>Draw your signature in this area.</Trans>
+      </canvas>
 
       <SignaturePadColorPicker selectedColor={selectedColor} setSelectedColor={setSelectedColor} />
 
@@ -290,7 +295,7 @@ export const SignaturePadDraw = ({ className, value, onChange, ...props }: Signa
 
       {isSignatureValid === false && (
         <div className="absolute bottom-4 left-4 flex gap-2">
-          <span className="text-destructive text-xs">
+          <span className="text-destructive text-xs" role="status">
             <Trans>Signature is too small</Trans>
           </span>
         </div>
@@ -300,7 +305,7 @@ export const SignaturePadDraw = ({ className, value, onChange, ...props }: Signa
         <div className="absolute bottom-4 left-4 flex gap-2">
           <button
             type="button"
-            title="undo"
+            aria-label={t`Undo`}
             className="rounded-full p-0 text-[0.688rem] text-muted-foreground/60 ring-offset-background hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={onUndoClick}
           >

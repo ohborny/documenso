@@ -11,6 +11,7 @@ interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 interface TabsContextValue {
+  baseId: string;
   value: string;
   onValueChange: (value: string) => void;
 }
@@ -26,7 +27,9 @@ function useTabs() {
 }
 
 export function Tabs({ defaultValue, value, onValueChange, children, className, ...props }: TabsProps) {
+  const reactId = React.useId();
   const [tabValue, setTabValue] = React.useState(defaultValue || '');
+  const baseId = props.id ?? `signature-tabs-${reactId}`;
 
   const handleValueChange = React.useCallback(
     (newValue: string) => {
@@ -38,10 +41,11 @@ export function Tabs({ defaultValue, value, onValueChange, children, className, 
 
   const contextValue = React.useMemo(
     () => ({
+      baseId,
       value: value !== undefined ? value : tabValue,
       onValueChange: handleValueChange,
     }),
-    [value, tabValue, handleValueChange],
+    [baseId, value, tabValue, handleValueChange],
   );
 
   return (
@@ -59,7 +63,7 @@ interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function TabsList({ children, className, ...props }: TabsListProps) {
   return (
-    <div className={cn('flex flex-wrap border-border border-b', className)} role="tabslist" {...props}>
+    <div className={cn('flex flex-wrap border-border border-b', className)} role="tablist" {...props}>
       {children}
     </div>
   );
@@ -72,14 +76,19 @@ interface TabsTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
 }
 
 export function TabsTrigger({ value, icon, children, className, ...props }: TabsTriggerProps) {
-  const { value: selectedValue, onValueChange } = useTabs();
+  const { baseId, value: selectedValue, onValueChange } = useTabs();
   const isSelected = selectedValue === value;
+  const triggerId = `${baseId}-trigger-${value}`;
+  const contentId = `${baseId}-content-${value}`;
 
   return (
     <button
+      id={triggerId}
       role="tab"
       type="button"
       aria-selected={isSelected}
+      aria-controls={contentId}
+      tabIndex={isSelected ? 0 : -1}
       data-state={isSelected ? 'active' : 'inactive'}
       onClick={() => onValueChange(value)}
       className={cn(
@@ -115,15 +124,24 @@ interface TabsContentProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function TabsContent({ value, children, className, ...props }: TabsContentProps) {
-  const { value: selectedValue } = useTabs();
+  const { baseId, value: selectedValue } = useTabs();
   const isSelected = selectedValue === value;
+  const triggerId = `${baseId}-trigger-${value}`;
+  const contentId = `${baseId}-content-${value}`;
 
   if (!isSelected) {
     return null;
   }
 
   return (
-    <div role="tabpanel" data-state={isSelected ? 'active' : 'inactive'} className={cn('mt-4', className)} {...props}>
+    <div
+      id={contentId}
+      role="tabpanel"
+      aria-labelledby={triggerId}
+      data-state={isSelected ? 'active' : 'inactive'}
+      className={cn('mt-4', className)}
+      {...props}
+    >
       {children}
     </div>
   );

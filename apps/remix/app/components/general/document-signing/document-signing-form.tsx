@@ -56,6 +56,7 @@ export const DocumentSigningForm = ({
   const navigate = useNavigate();
 
   const assistantSignersId = useId();
+  const signatureInputId = useId();
 
   const { fullName, signature, setFullName, setSignature } = useRequiredDocumentSigningContext();
 
@@ -241,11 +242,12 @@ export const DocumentSigningForm = ({
 
                   {hasSignatureField && (
                     <div>
-                      <Label htmlFor="Signature">
+                      <Label htmlFor={signatureInputId}>
                         <Trans>Signature</Trans>
                       </Label>
 
                       <SignaturePadDialog
+                        id={signatureInputId}
                         className="mt-2"
                         disabled={isSubmitting}
                         fullName={fullName}
