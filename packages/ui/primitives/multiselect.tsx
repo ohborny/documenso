@@ -1,3 +1,5 @@
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
 import { Command as CommandPrimitive, useCommandState } from 'cmdk';
 import { XIcon } from 'lucide-react';
 import * as React from 'react';
@@ -165,6 +167,7 @@ const MultiSelect = ({
   hideClearAllButton = false,
   'data-testid': dataTestId,
 }: MultiSelectProps) => {
+  const { _ } = useLingui();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
   const [onScrollbar, setOnScrollbar] = React.useState(false);
@@ -442,7 +445,7 @@ const MultiSelect = ({
                     e.stopPropagation();
                   }}
                   onClick={() => handleUnselect(option)}
-                  aria-label="Remove"
+                  aria-label={_(msg`Remove`)}
                 >
                   <XIcon size={14} aria-hidden="true" />
                 </button>
@@ -497,7 +500,7 @@ const MultiSelect = ({
                 selected.filter((s) => s.fixed).length === selected.length) &&
                 'hidden',
             )}
-            aria-label="Clear all"
+            aria-label={_(msg`Clear all`)}
           >
             <XIcon size={16} aria-hidden="true" />
           </button>

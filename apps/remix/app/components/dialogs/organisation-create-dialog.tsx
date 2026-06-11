@@ -155,7 +155,7 @@ export const OrganisationCreateDialog = ({ trigger, ...props }: OrganisationCrea
                   <Trans>Select a plan to continue</Trans>
                 </DialogDescription>
               </DialogHeader>
-              <fieldset aria-label="Plan select">
+              <fieldset aria-label={t`Plan select`}>
                 {plansData ? (
                   <BillingPlanForm
                     value={selectedPriceId}

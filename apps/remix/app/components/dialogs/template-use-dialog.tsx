@@ -279,7 +279,7 @@ export function TemplateUseDialog({
                           )}
 
                           <FormControl>
-                            <Input {...field} aria-label="Email" placeholder={_(msg`Email`)} />
+                            <Input {...field} aria-label={_(msg`Email`)} placeholder={_(msg`Email`)} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -300,7 +300,7 @@ export function TemplateUseDialog({
                           <FormControl>
                             <Input
                               {...field}
-                              aria-label="Name"
+                              aria-label={_(msg`Name`)}
                               placeholder={recipients[index].name || _(msg`Recipient ${index + 1}`)}
                             />
                           </FormControl>

@@ -29,7 +29,7 @@ export const TemplateDirectLinkBadge = ({ token, enabled, className }: TemplateD
 
   return (
     <button
-      title="Copy direct link"
+      title={_(msg`Copy direct link`)}
       className={cn(
         'flex flex-row items-center rounded border border-neutral-300 bg-neutral-200 px-1.5 py-0.5 text-xs dark:border-neutral-500 dark:bg-neutral-600',
         className,

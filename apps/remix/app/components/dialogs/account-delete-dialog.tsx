@@ -120,7 +120,7 @@ export const AccountDeleteDialog = ({ className }: AccountDeleteDialogProps) => 
                   <Input
                     type="text"
                     className="mt-2"
-                    aria-label="Confirm Email"
+                    aria-label={_(msg`Confirm Email`)}
                     value={enteredEmail}
                     onChange={(e) => setEnteredEmail(e.target.value)}
                   />

@@ -251,7 +251,7 @@ export default function SigningCertificate({ loaderData }: Route.ComponentProps)
                             {signature.signature?.signatureImageAsBase64 && (
                               <img
                                 src={`${signature.signature?.signatureImageAsBase64}`}
-                                alt="Signature"
+                                alt={_(msg`Signature`)}
                                 className="max-h-12 max-w-full"
                               />
                             )}

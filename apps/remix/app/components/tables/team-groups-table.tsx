@@ -97,7 +97,7 @@ export const TeamGroupsTable = () => {
                 teamGroupName={row.original.name ?? ''}
                 teamGroupRole={row.original.teamRole}
                 trigger={
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} title="Update team group role">
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} title={_(msg`Update team group role`)}>
                     <EditIcon className="mr-2 h-4 w-4" />
                     <Trans>Update role</Trans>
                   </DropdownMenuItem>
