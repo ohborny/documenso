@@ -27,6 +27,27 @@ vi.mock('@documenso/prisma', () => ({
   prisma: {},
 }));
 
+vi.mock('@prisma/client', () => ({
+  DocumentVisibility: {
+    ADMIN: 'ADMIN',
+    EVERYONE: 'EVERYONE',
+    MANAGER_AND_ABOVE: 'MANAGER_AND_ABOVE',
+  },
+  OrganisationGroupType: {
+    CUSTOM: 'CUSTOM',
+    INTERNAL_ORGANISATION: 'INTERNAL_ORGANISATION',
+    INTERNAL_TEAM: 'INTERNAL_TEAM',
+  },
+  Prisma: {
+    PrismaClientKnownRequestError: class PrismaClientKnownRequestError extends Error {},
+  },
+  TeamMemberRole: {
+    ADMIN: 'ADMIN',
+    MANAGER: 'MANAGER',
+    MEMBER: 'MEMBER',
+  },
+}));
+
 vi.mock('@lingui/core/macro', () => ({
   msg: (strings: TemplateStringsArray, teamName: string) => `${strings[0]}${teamName}${strings[1]}`,
 }));

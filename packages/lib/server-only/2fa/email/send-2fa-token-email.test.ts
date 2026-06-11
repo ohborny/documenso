@@ -42,6 +42,30 @@ vi.mock('@documenso/prisma', () => ({
   },
 }));
 
+vi.mock('@prisma/client', () => ({
+  DocumentSource: {
+    DOCUMENT: 'DOCUMENT',
+    TEMPLATE: 'TEMPLATE',
+    TEMPLATE_DIRECT_LINK: 'TEMPLATE_DIRECT_LINK',
+  },
+  EnvelopeType: {
+    DOCUMENT: 'DOCUMENT',
+  },
+  FieldType: {
+    CHECKBOX: 'CHECKBOX',
+    DATE: 'DATE',
+    DROPDOWN: 'DROPDOWN',
+    EMAIL: 'EMAIL',
+    FREE_SIGNATURE: 'FREE_SIGNATURE',
+    INITIALS: 'INITIALS',
+    NAME: 'NAME',
+    NUMBER: 'NUMBER',
+    RADIO: 'RADIO',
+    SIGNATURE: 'SIGNATURE',
+    TEXT: 'TEXT',
+  },
+}));
+
 vi.mock('@lingui/core/macro', () => ({
   msg: (strings: TemplateStringsArray) => strings[0],
 }));
