@@ -5,7 +5,7 @@ import { FieldRootContainer } from '@documenso/ui/components/field/field';
 import { getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
 import { cn } from '@documenso/ui/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import { FieldType } from '@prisma/client';
 import { TooltipArrow } from '@radix-ui/react-tooltip';
 import { X } from 'lucide-react';
@@ -52,6 +52,7 @@ export const DocumentSigningFieldContainer = ({
   type,
   tooltipText,
 }: DocumentSigningFieldContainerProps) => {
+  const { t } = useLingui();
   const { executeActionAuthProcedure, isAuthRedirectRequired } = useRequiredDocumentSigningAuthContext();
 
   const parsedFieldMeta = field.fieldMeta ? ZFieldMetaSchema.parse(field.fieldMeta) : undefined;
@@ -120,7 +121,8 @@ export const DocumentSigningFieldContainer = ({
     <FieldRootContainer color={getRecipientColorStyles(field.fieldMeta?.readOnly ? 'readOnly' : 0)} field={field}>
       {!field.inserted && !loading && !readOnlyField && (
         <button
-          type="submit"
+          type="button"
+          aria-label={t`Insert field`}
           className="absolute inset-0 z-10 h-full w-full rounded-[2px]"
           onClick={async () => handleInsertField()}
         />
@@ -128,6 +130,8 @@ export const DocumentSigningFieldContainer = ({
 
       {type === 'Checkbox' && field.inserted && !loading && !readOnlyField && (
         <button
+          type="button"
+          aria-label={t`Clear checkbox field`}
           className="absolute -bottom-10 flex items-center justify-evenly rounded-md border bg-gray-900 opacity-0 group-hover:opacity-100"
           onClick={() => void onClearCheckBoxValues(type)}
         >
@@ -140,7 +144,12 @@ export const DocumentSigningFieldContainer = ({
       {type !== 'Checkbox' && field.inserted && !loading && !readOnlyField && (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            <button className="absolute inset-0 z-10" onClick={onRemoveSignedFieldClick}></button>
+            <button
+              type="button"
+              aria-label={t`Remove signed field`}
+              className="absolute inset-0 z-10"
+              onClick={onRemoveSignedFieldClick}
+            />
           </TooltipTrigger>
 
           <TooltipContent className="border-0 bg-orange-300 fill-orange-300 text-orange-900" sideOffset={2}>

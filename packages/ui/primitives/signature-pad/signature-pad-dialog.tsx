@@ -1,5 +1,13 @@
 import { parseMessageDescriptor } from '@documenso/lib/utils/i18n';
-import { Dialog, DialogClose, DialogContent, DialogFooter } from '@documenso/ui/primitives/dialog';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@documenso/ui/primitives/dialog';
 
 import type { MessageDescriptor } from '@lingui/core';
 import { Trans, useLingui } from '@lingui/react/macro';
@@ -25,6 +33,7 @@ export type SignaturePadDialogProps = Omit<HTMLAttributes<HTMLCanvasElement>, 'o
 };
 
 export const SignaturePadDialog = ({
+  id,
   className,
   fullName,
   value,
@@ -36,7 +45,7 @@ export const SignaturePadDialog = ({
   drawSignatureEnabled,
   dialogConfirmText,
 }: SignaturePadDialogProps) => {
-  const { i18n } = useLingui();
+  const { i18n, t } = useLingui();
 
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [signature, setSignature] = useState<string>(value ?? '');
@@ -58,9 +67,11 @@ export const SignaturePadDialog = ({
       )}
 
       <motion.button
+        id={id}
         data-testid="signature-pad-dialog-button"
         type="button"
         disabled={disabled}
+        aria-label={value ? t`Change signature` : t`Add signature`}
         className="absolute inset-0 flex items-center justify-center bg-transparent"
         onClick={() => setShowSignatureModal(true)}
         whileHover="onHover"
@@ -72,6 +83,7 @@ export const SignaturePadDialog = ({
             viewBox="0 0 16 16"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
             className="text-muted-foreground/60"
             variants={{
               onHover: {
@@ -111,6 +123,15 @@ export const SignaturePadDialog = ({
 
       <Dialog open={showSignatureModal} onOpenChange={disabled ? undefined : setShowSignatureModal}>
         <DialogContent hideClose={true} className="p-6 pt-4">
+          <DialogHeader>
+            <DialogTitle>
+              <Trans>Add your signature</Trans>
+            </DialogTitle>
+            <DialogDescription>
+              <Trans>Draw, type, or upload the signature that will be used on this document.</Trans>
+            </DialogDescription>
+          </DialogHeader>
+
           <SignaturePad
             id="signature"
             fullName={fullName}

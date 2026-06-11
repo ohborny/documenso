@@ -22,7 +22,7 @@ import { DocumentReadOnlyFields } from '@documenso/ui/components/document/docume
 import { Button } from '@documenso/ui/primitives/button';
 import { Card, CardContent } from '@documenso/ui/primitives/card';
 import { ElementVisible } from '@documenso/ui/primitives/element-visible';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import type { Field } from '@prisma/client';
 import { FieldType, RecipientRole } from '@prisma/client';
 import { LucideChevronDown, LucideChevronUp } from 'lucide-react';
@@ -69,16 +69,13 @@ export const DocumentSigningPageViewV1 = ({
   allRecipients = [],
   includeSenderDetails,
 }: DocumentSigningPageViewV1Props) => {
-  const { documentData, documentMeta } = document;
+  const { documentMeta } = document;
 
-  const { derivedRecipientAccessAuth, user: authUser } = useRequiredDocumentSigningAuthContext();
-
-  const hasAuthenticator = authUser?.twoFactorEnabled
-    ? authUser.twoFactorEnabled && authUser.email === recipient.email
-    : false;
+  useRequiredDocumentSigningAuthContext();
 
   const navigate = useNavigate();
   const analytics = useAnalytics();
+  const { t } = useLingui();
 
   const [selectedSignerId, setSelectedSignerId] = useState<number | null>(allRecipients?.[0]?.id);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -294,14 +291,14 @@ export const DocumentSigningPageViewV1 = ({
           >
             <div className="flex w-full flex-col rounded-xl border border-border bg-widget px-4 py-4 md:py-6">
               <div className="flex items-center justify-between gap-x-2">
-                <h3 className="font-semibold text-foreground text-xl md:text-2xl">
+                <h2 className="font-semibold text-foreground text-xl md:text-2xl">
                   {match(recipient.role)
                     .with(RecipientRole.VIEWER, () => <Trans>View Document</Trans>)
                     .with(RecipientRole.SIGNER, () => <Trans>Sign Document</Trans>)
                     .with(RecipientRole.APPROVER, () => <Trans>Approve Document</Trans>)
                     .with(RecipientRole.ASSISTANT, () => <Trans>Assist Document</Trans>)
                     .otherwise(() => null)}
-                </h3>
+                </h2>
 
                 {match({ hasPendingFields, isExpanded, role: recipient.role })
                   .with(
@@ -332,6 +329,7 @@ export const DocumentSigningPageViewV1 = ({
                     <Button
                       variant="outline"
                       className="h-8 w-8 bg-background p-0 md:hidden dark:bg-foreground"
+                      aria-label={t`Collapse signing panel`}
                       onClick={() => setIsExpanded(false)}
                     >
                       <LucideChevronDown className="h-5 w-5 text-muted-foreground dark:text-background" />
@@ -341,6 +339,7 @@ export const DocumentSigningPageViewV1 = ({
                     <Button
                       variant="outline"
                       className="h-8 w-8 bg-background p-0 md:hidden dark:bg-foreground"
+                      aria-label={t`Expand signing panel`}
                       onClick={() => setIsExpanded(true)}
                     >
                       <LucideChevronUp className="h-5 w-5 text-muted-foreground dark:text-background" />

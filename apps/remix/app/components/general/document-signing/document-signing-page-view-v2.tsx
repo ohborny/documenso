@@ -79,6 +79,12 @@ export const DocumentSigningPageViewV2 = () => {
     return recipientFields.filter((field) => !field.inserted);
   }, [recipientFieldsRemaining, selectedAssistantRecipientFields, currentEnvelopeItem]);
 
+  const signingProgress = Math.round(
+    requiredRecipientFields.length === 0
+      ? 100
+      : 100 - (100 / requiredRecipientFields.length) * (recipientFieldsRemaining.length ?? 0),
+  );
+
   return (
     <div className="min-h-screen w-screen bg-gray-50 dark:bg-background">
       <SignFieldEmailDialog.Root />
@@ -116,7 +122,7 @@ export const DocumentSigningPageViewV2 = () => {
 
           <div className={cn('flex flex-1 flex-col overflow-hidden py-4', isSidebarCollapsed && 'invisible w-0')}>
             <div className="px-4">
-              <h3 className="flex items-end justify-between font-semibold text-foreground text-sm">
+              <h2 className="flex items-end justify-between font-semibold text-foreground text-sm">
                 {match(recipient.role)
                   .with(RecipientRole.VIEWER, () => <Trans>View Document</Trans>)
                   .with(RecipientRole.SIGNER, () => <Trans>Sign Document</Trans>)
@@ -142,15 +148,22 @@ export const DocumentSigningPageViewV2 = () => {
                     <PanelLeftCloseIcon className="h-4 w-4" />
                   </Button>
                 </div>
-              </h3>
+              </h2>
 
-              <div className="relative my-4 h-[4px] rounded-md bg-muted">
+              <div
+                className="relative my-4 h-[4px] rounded-md bg-muted"
+                role="progressbar"
+                aria-label={t`Signing progress`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={signingProgress}
+              >
                 <motion.div
                   layout="size"
                   layoutId="document-flow-container-step"
                   className="absolute inset-y-0 left-0 bg-primary"
                   style={{
-                    width: `${requiredRecipientFields.length === 0 ? 100 : 100 - (100 / requiredRecipientFields.length) * (recipientFieldsRemaining.length ?? 0)}%`,
+                    width: `${signingProgress}%`,
                   }}
                 />
               </div>

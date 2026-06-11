@@ -5,13 +5,15 @@ import { RadioGroup, RadioGroupItem } from '@documenso/ui/primitives/radio-group
 import { SignaturePadDialog } from '@documenso/ui/primitives/signature-pad/signature-pad-dialog';
 import { Plural, Trans } from '@lingui/react/macro';
 import { RecipientRole } from '@prisma/client';
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 
 import { useEmbedSigningContext } from '~/components/embed/embed-signing-context';
 
 import { useRequiredEnvelopeSigningContext } from '../document-signing/envelope-signing-provider';
 
 export default function EnvelopeSignerForm() {
+  const signatureInputId = useId();
+
   const {
     fullName,
     signature,
@@ -26,7 +28,7 @@ export default function EnvelopeSignerForm() {
     setSelectedAssistantRecipientId,
   } = useRequiredEnvelopeSigningContext();
 
-  const { isNameLocked, isEmailLocked } = useEmbedSigningContext() || {};
+  const { isNameLocked } = useEmbedSigningContext() || {};
 
   const hasSignatureField = useMemo(() => {
     return recipientFields.some((field) => isSignatureFieldType(field.type));
@@ -108,11 +110,12 @@ export default function EnvelopeSignerForm() {
 
         {hasSignatureField && (
           <div>
-            <Label htmlFor="Signature">
+            <Label htmlFor={signatureInputId}>
               <Trans>Signature</Trans>
             </Label>
 
             <SignaturePadDialog
+              id={signatureInputId}
               className="mt-2"
               disabled={isSubmitting}
               fullName={fullName}

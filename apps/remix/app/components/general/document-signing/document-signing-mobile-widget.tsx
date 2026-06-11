@@ -1,6 +1,6 @@
 import { Button } from '@documenso/ui/primitives/button';
 
-import { Plural, Trans } from '@lingui/react/macro';
+import { Plural, Trans, useLingui } from '@lingui/react/macro';
 import { RecipientRole } from '@prisma/client';
 import { motion } from 'framer-motion';
 import { LucideChevronDown, LucideChevronUp } from 'lucide-react';
@@ -16,10 +16,16 @@ import { useRequiredEnvelopeSigningContext } from './envelope-signing-provider';
 
 export const DocumentSigningMobileWidget = () => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useLingui();
 
   const { hidePoweredBy = true } = useEmbedSigningContext() || {};
 
   const { recipientFieldsRemaining, recipient, requiredRecipientFields } = useRequiredEnvelopeSigningContext();
+  const signingProgress = Math.round(
+    requiredRecipientFields.length === 0
+      ? 100
+      : 100 - (100 / requiredRecipientFields.length) * (recipientFieldsRemaining.length ?? 0),
+  );
 
   /**
    * Pre open the widget for assistants to let them know it's there.
@@ -43,7 +49,8 @@ export const DocumentSigningMobileWidget = () => {
                     variant="outline"
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="flex h-8 w-8 items-center justify-center"
-                    aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                    aria-expanded={isExpanded}
+                    aria-label={isExpanded ? t`Collapse signing panel` : t`Expand signing panel`}
                   >
                     {isExpanded ? (
                       <LucideChevronDown className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
@@ -91,13 +98,20 @@ export const DocumentSigningMobileWidget = () => {
           {/* Progress Bar */}
           {recipient.role !== RecipientRole.VIEWER && recipient.role !== RecipientRole.ASSISTANT && (
             <div className="px-4 pb-3">
-              <div className="relative h-[4px] rounded-md bg-muted">
+              <div
+                className="relative h-[4px] rounded-md bg-muted"
+                role="progressbar"
+                aria-label={t`Signing progress`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={signingProgress}
+              >
                 <motion.div
                   layout="size"
                   layoutId="document-signing-mobile-widget-progress-bar"
                   className="absolute inset-y-0 left-0 bg-primary"
                   style={{
-                    width: `${requiredRecipientFields.length === 0 ? 100 : 100 - (100 / requiredRecipientFields.length) * (recipientFieldsRemaining.length ?? 0)}%`,
+                    width: `${signingProgress}%`,
                   }}
                 />
               </div>
