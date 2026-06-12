@@ -125,6 +125,13 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
             envelopeItemCount: sourceOrg.organisationClaim.envelopeItemCount,
             recipientCount: sourceOrg.organisationClaim.recipientCount,
             flags: sourceOrg.organisationClaim.flags,
+            documentRateLimits: sourceOrg.organisationClaim.documentRateLimits,
+            documentQuota: sourceOrg.organisationClaim.documentQuota,
+            emailRateLimits: sourceOrg.organisationClaim.emailRateLimits,
+            emailQuota: sourceOrg.organisationClaim.emailQuota,
+            apiRateLimits: sourceOrg.organisationClaim.apiRateLimits,
+            apiQuota: sourceOrg.organisationClaim.apiQuota,
+            emailTransportId: sourceOrg.organisationClaim.emailTransportId,
           },
         });
       }
