@@ -44,10 +44,12 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
       });
     }
 
+    const sourceSubscription = sourceOrg.subscription;
+
     if (
-      !sourceOrg.subscription ||
-      (sourceOrg.subscription.status !== SubscriptionStatus.ACTIVE &&
-        sourceOrg.subscription.status !== SubscriptionStatus.PAST_DUE)
+      !sourceSubscription ||
+      (sourceSubscription.status !== SubscriptionStatus.ACTIVE &&
+        sourceSubscription.status !== SubscriptionStatus.PAST_DUE)
     ) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Source organisation does not have an active subscription',
@@ -110,7 +112,7 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
 
       // Move the subscription record to the target org.
       await tx.subscription.update({
-        where: { id: sourceOrg.subscription!.id },
+        where: { id: sourceSubscription.id },
         data: { organisationId: targetOrganisationId },
       });
 
@@ -125,6 +127,13 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
             envelopeItemCount: sourceOrg.organisationClaim.envelopeItemCount,
             recipientCount: sourceOrg.organisationClaim.recipientCount,
             flags: sourceOrg.organisationClaim.flags,
+            documentRateLimits: sourceOrg.organisationClaim.documentRateLimits,
+            documentQuota: sourceOrg.organisationClaim.documentQuota,
+            emailRateLimits: sourceOrg.organisationClaim.emailRateLimits,
+            emailQuota: sourceOrg.organisationClaim.emailQuota,
+            apiRateLimits: sourceOrg.organisationClaim.apiRateLimits,
+            apiQuota: sourceOrg.organisationClaim.apiQuota,
+            emailTransportId: sourceOrg.organisationClaim.emailTransportId,
           },
         });
       }
