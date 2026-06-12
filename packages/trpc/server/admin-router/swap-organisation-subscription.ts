@@ -44,10 +44,12 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
       });
     }
 
+    const sourceSubscription = sourceOrg.subscription;
+
     if (
-      !sourceOrg.subscription ||
-      (sourceOrg.subscription.status !== SubscriptionStatus.ACTIVE &&
-        sourceOrg.subscription.status !== SubscriptionStatus.PAST_DUE)
+      !sourceSubscription ||
+      (sourceSubscription.status !== SubscriptionStatus.ACTIVE &&
+        sourceSubscription.status !== SubscriptionStatus.PAST_DUE)
     ) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Source organisation does not have an active subscription',
@@ -110,7 +112,7 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
 
       // Move the subscription record to the target org.
       await tx.subscription.update({
-        where: { id: sourceOrg.subscription!.id },
+        where: { id: sourceSubscription.id },
         data: { organisationId: targetOrganisationId },
       });
 

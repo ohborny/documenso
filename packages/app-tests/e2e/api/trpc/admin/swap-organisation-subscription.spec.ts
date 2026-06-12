@@ -40,6 +40,10 @@ test('[ADMIN][TRPC][SWAP_ORG_SUBSCRIPTION]: copies quota and rate-limit entitlem
 
   expect(targetOrganisation).toBeTruthy();
 
+  if (!targetOrganisation) {
+    throw new Error('Target organisation was not created');
+  }
+
   const emailTransport = await prisma.emailTransport.create({
     data: {
       id: generateDatabaseId('email_transport'),
@@ -94,7 +98,7 @@ test('[ADMIN][TRPC][SWAP_ORG_SUBSCRIPTION]: copies quota and rate-limit entitlem
 
   const res = await callSwapOrganisationSubscription(page, {
     sourceOrganisationId: sourceOrganisation.id,
-    targetOrganisationId: targetOrganisation!.id,
+    targetOrganisationId: targetOrganisation.id,
   });
 
   expect(res.ok()).toBeTruthy();
@@ -104,7 +108,7 @@ test('[ADMIN][TRPC][SWAP_ORG_SUBSCRIPTION]: copies quota and rate-limit entitlem
   });
 
   const targetClaim = await prisma.organisationClaim.findFirstOrThrow({
-    where: { organisation: { id: targetOrganisation!.id } },
+    where: { organisation: { id: targetOrganisation.id } },
   });
 
   expect(targetClaim).toMatchObject(sourceEntitlements);
