@@ -41,6 +41,10 @@ vi.mock('../../../client-only/providers/i18n-server', () => ({
   getI18nInstance: vi.fn(),
 }));
 
+vi.mock('../../../utils/render-email-with-i18n', () => ({
+  renderEmailWithI18N: vi.fn(),
+}));
+
 vi.mock('../../../server-only/email/get-email-context', () => ({
   getEmailContext: mocks.getEmailContext,
 }));
