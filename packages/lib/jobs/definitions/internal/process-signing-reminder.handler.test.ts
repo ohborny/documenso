@@ -37,6 +37,10 @@ vi.mock('../../../constants/recipient-roles', () => ({
   },
 }));
 
+vi.mock('../../../client-only/providers/i18n-server', () => ({
+  getI18nInstance: vi.fn(),
+}));
+
 vi.mock('../../../server-only/email/get-email-context', () => ({
   getEmailContext: mocks.getEmailContext,
 }));
