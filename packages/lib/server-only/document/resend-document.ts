@@ -26,6 +26,7 @@ import { isDocumentCompleted } from '../../utils/document';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { isRecipientEmailValidForSending } from '../../utils/recipients';
 import { renderEmailWithI18N } from '../../utils/render-email-with-i18n';
+import { assertEmailSendingEnabled } from '../email/assert-email-sending-enabled';
 import { buildEnvelopeEmailHeaders } from '../email/build-envelope-email-headers';
 import { getEmailContext } from '../email/get-email-context';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
@@ -117,30 +118,12 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
     });
   }
 
-  // Refresh the expiresAt on each resent recipient.
-  const expiresAt = resolveExpiresAt(envelope.documentMeta?.envelopeExpirationPeriod ?? null);
-
   const recipientsToRemind = envelope.recipients.filter(
     (recipient) =>
       recipients.includes(recipient.id) &&
       recipient.signingStatus === SigningStatus.NOT_SIGNED &&
       recipient.role !== RecipientRole.CC,
   );
-
-  // Extend the expiration deadline for recipients being resent.
-  if (expiresAt && recipientsToRemind.length > 0) {
-    await prisma.recipient.updateMany({
-      where: {
-        id: {
-          in: recipientsToRemind.map((r) => r.id),
-        },
-      },
-      data: {
-        expiresAt,
-        expirationNotifiedAt: null,
-      },
-    });
-  }
 
   const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
     envelope.documentMeta,
@@ -170,8 +153,29 @@ export const resendDocument = async ({ id, userId, recipients, teamId, requestMe
   });
 
   // Don't resend any emails if the organisation has email sending disabled.
-  if (user.disabled || emailsDisabled) {
-    return envelope;
+  const recipientsToEmail = recipientsToRemind.filter(isRecipientEmailValidForSending);
+
+  if (recipientsToEmail.length > 0) {
+    assertEmailSendingEnabled(user.disabled || emailsDisabled);
+  }
+
+  // Refresh the expiresAt on each resent recipient after confirming the reminder
+  // emails can actually be sent.
+  const expiresAt = resolveExpiresAt(envelope.documentMeta?.envelopeExpirationPeriod ?? null);
+
+  // Extend the expiration deadline for recipients being resent.
+  if (expiresAt && recipientsToRemind.length > 0) {
+    await prisma.recipient.updateMany({
+      where: {
+        id: {
+          in: recipientsToRemind.map((r) => r.id),
+        },
+      },
+      data: {
+        expiresAt,
+        expirationNotifiedAt: null,
+      },
+    });
   }
 
   // Assert that there is enough quota to send the emails.

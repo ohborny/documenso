@@ -33,6 +33,16 @@ export const run = async ({ payload, io }: { payload: TProcessSigningReminderJob
   const { recipientId } = payload;
   const now = new Date();
 
+  const reminderState = await prisma.recipient.findFirst({
+    where: {
+      id: recipientId,
+    },
+    select: {
+      lastReminderSentAt: true,
+      nextReminderAt: true,
+    },
+  });
+
   // Atomically claim this reminder by setting lastReminderSentAt and clearing
   // nextReminderAt so no other sweep picks it up. The expiration filter
   // guards against races where the expiration sweep hasn't yet flagged
@@ -124,6 +134,19 @@ export const run = async ({ payload, io }: { payload: TProcessSigningReminderJob
   // has email sending disabled.
   if (envelope.user.disabled || emailsDisabled) {
     io.logger.info(`Envelope ${envelope.id} skipping reminder: owner disabled or organisation emails disabled`);
+
+    if (reminderState?.nextReminderAt) {
+      await prisma.recipient.update({
+        where: {
+          id: recipient.id,
+        },
+        data: {
+          lastReminderSentAt: reminderState.lastReminderSentAt,
+          nextReminderAt: reminderState.nextReminderAt,
+        },
+      });
+    }
+
     return;
   }
 

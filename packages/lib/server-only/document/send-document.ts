@@ -37,6 +37,8 @@ import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import { type EnvelopeIdOptions, mapSecondaryIdToDocumentId } from '../../utils/envelope';
 import { toCheckboxCustomText, toRadioCustomText } from '../../utils/fields';
 import { getRecipientsWithMissingFields, isRecipientEmailValidForSending } from '../../utils/recipients';
+import { assertEmailSendingEnabled } from '../email/assert-email-sending-enabled';
+import { getEmailContext } from '../email/get-email-context';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { insertFormValuesInPdf } from '../pdf/insert-form-values-in-pdf';
 import { assertUserNotDisabledById } from '../user/assert-user-not-disabled';
@@ -139,14 +141,6 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
     throw new Error('Missing envelope items');
   }
 
-  if (envelope.formValues) {
-    await Promise.all(
-      envelope.envelopeItems.map(async (envelopeItem) => {
-        await injectFormValuesIntoDocument(envelope, envelopeItem);
-      }),
-    );
-  }
-
   // Validate that recipients with auth requirements have a valid email.
   envelope.recipients.forEach((recipient) => {
     const auth = extractDocumentAuthMethods({
@@ -201,6 +195,41 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
         recipients: true,
       },
     });
+  }
+
+  const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
+    envelope.documentMeta,
+  ).recipientSigningRequest;
+
+  const shouldSendSigningRequestEmails =
+    sendEmail === true || (isRecipientSigningRequestEmailEnabled && sendEmail === undefined);
+
+  const recipientsToEmail = recipientsToNotify.filter(
+    (recipient) =>
+      recipient.sendStatus !== SendStatus.SENT &&
+      recipient.role !== RecipientRole.CC &&
+      isRecipientEmailValidForSending(recipient),
+  );
+
+  if (shouldSendSigningRequestEmails && recipientsToEmail.length > 0) {
+    const { emailsDisabled } = await getEmailContext({
+      emailType: 'RECIPIENT',
+      source: {
+        type: 'team',
+        teamId: envelope.teamId,
+      },
+      meta: envelope.documentMeta,
+    });
+
+    assertEmailSendingEnabled(emailsDisabled);
+  }
+
+  if (envelope.formValues) {
+    await Promise.all(
+      envelope.envelopeItems.map(async (envelopeItem) => {
+        await injectFormValuesIntoDocument(envelope, envelopeItem);
+      }),
+    );
   }
 
   const fieldsToAutoInsert: { fieldId: number; customText: string }[] = [];
@@ -305,14 +334,10 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
     });
   });
 
-  const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
-    envelope.documentMeta,
-  ).recipientSigningRequest;
-
   // Only send email if one of the following is true:
   // - It is explicitly set
   // - The email is enabled for signing requests AND sendEmail is undefined
-  if (sendEmail || (isRecipientSigningRequestEmailEnabled && sendEmail === undefined)) {
+  if (shouldSendSigningRequestEmails) {
     await Promise.all(
       recipientsToNotify.map(async (recipient) => {
         if (recipient.sendStatus === SendStatus.SENT || recipient.role === RecipientRole.CC) {
