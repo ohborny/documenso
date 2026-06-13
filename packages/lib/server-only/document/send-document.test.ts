@@ -145,7 +145,6 @@ const baseOptions = {
   requestMetadata: {
     source: 'app' as const,
     auth: 'session' as const,
-    auditUser: null,
     requestMetadata: {},
   },
 };
