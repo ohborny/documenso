@@ -22,6 +22,21 @@ vi.mock('@documenso/prisma', () => ({
   prisma: mocks.prisma,
 }));
 
+vi.mock('@documenso/email/templates/document-reminder', () => ({
+  default: vi.fn(),
+}));
+
+vi.mock('../../../constants/recipient-roles', () => ({
+  RECIPIENT_ROLES_DESCRIPTION: {
+    [RecipientRole.SIGNER]: {
+      actionVerb: {
+        id: 'sign',
+        message: 'Sign',
+      },
+    },
+  },
+}));
+
 vi.mock('../../../server-only/email/get-email-context', () => ({
   getEmailContext: mocks.getEmailContext,
 }));
