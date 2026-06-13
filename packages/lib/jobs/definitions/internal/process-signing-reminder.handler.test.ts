@@ -120,7 +120,7 @@ describe('process signing reminder job', () => {
       payload: {
         recipientId: 10,
       },
-      io: createIo() as Parameters<typeof run>[0]['io'],
+      io: createIo() as unknown as Parameters<typeof run>[0]['io'],
     });
 
     expect(mocks.prisma.recipient.updateMany).toHaveBeenCalledWith(
