@@ -73,18 +73,22 @@ export const send2FATokenEmail = async ({ token, envelopeId }: Send2FATokenEmail
     });
   }
 
-  const twoFactorTokenToken = await generateTwoFactorTokenFromEmail({
-    envelopeId,
-    email: recipient.email,
-  });
-
-  const { branding, emailLanguage, senderEmail, replyToEmail, emailTransport } = await getEmailContext({
+  const { branding, emailLanguage, senderEmail, replyToEmail, emailsDisabled, emailTransport } = await getEmailContext({
     emailType: 'RECIPIENT',
     source: {
       type: 'team',
       teamId: envelope.teamId,
     },
     meta: envelope.documentMeta,
+  });
+
+  if (emailsDisabled) {
+    return;
+  }
+
+  const twoFactorTokenToken = await generateTwoFactorTokenFromEmail({
+    envelopeId,
+    email: recipient.email,
   });
 
   const i18n = await getI18nInstance(emailLanguage);
