@@ -1,3 +1,4 @@
+import { mailer } from '@documenso/email/mailer';
 import { AccessAuth2FAEmailTemplate } from '@documenso/email/templates/access-auth-2fa';
 import { isRecipientEmailValidForSending } from '@documenso/lib/utils/recipients';
 import { prisma } from '@documenso/prisma';
@@ -7,6 +8,7 @@ import { createElement } from 'react';
 
 import { getI18nInstance } from '../../../client-only/providers/i18n-server';
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../../constants/app';
+import { DOCUMENSO_INTERNAL_EMAIL } from '../../../constants/email';
 import { AppError, AppErrorCode } from '../../../errors/app-error';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '../../../types/document-audit-logs';
 import { createDocumentAuditLogData } from '../../../utils/document-audit-logs';
@@ -78,7 +80,9 @@ export const send2FATokenEmail = async ({ token, envelopeId }: Send2FATokenEmail
     email: recipient.email,
   });
 
-  const { branding, emailLanguage, senderEmail, replyToEmail, emailTransport } = await getEmailContext({
+  // Access-auth 2FA is security-critical and must not depend on an
+  // organisation's potentially misconfigured custom transport.
+  const { branding, emailLanguage } = await getEmailContext({
     emailType: 'RECIPIENT',
     source: {
       type: 'team',
@@ -107,13 +111,12 @@ export const send2FATokenEmail = async ({ token, envelopeId }: Send2FATokenEmail
 
   // Send email outside any transaction to avoid holding a connection
   // open during network I/O.
-  await emailTransport.sendMail({
+  await mailer.sendMail({
     to: {
       address: recipient.email,
       name: recipient.name,
     },
-    from: senderEmail,
-    replyTo: replyToEmail,
+    from: DOCUMENSO_INTERNAL_EMAIL,
     subject,
     html,
     text,
