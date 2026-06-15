@@ -34,6 +34,10 @@ vi.mock('@prisma/client', () => ({
   },
 }));
 
+vi.mock('@lingui/core/macro', () => ({
+  msg: (strings: TemplateStringsArray) => strings[0],
+}));
+
 vi.mock('../../../client-only/providers/i18n-server', () => ({
   getI18nInstance: vi.fn().mockResolvedValue({
     _: vi.fn(() => 'Your two-factor authentication code'),
