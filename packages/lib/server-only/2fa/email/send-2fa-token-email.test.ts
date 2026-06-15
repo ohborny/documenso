@@ -69,7 +69,7 @@ describe('send2FATokenEmail', () => {
     };
 
     vi.mocked(prisma.envelope.findFirst).mockResolvedValue({
-      id: 'envelope-1',
+      id: 'envelope_01',
       title: 'Critical Contract',
       teamId: 1,
       documentMeta: {
@@ -109,7 +109,7 @@ describe('send2FATokenEmail', () => {
     vi.mocked(generateTwoFactorTokenFromEmail).mockResolvedValue('123456');
 
     await send2FATokenEmail({
-      envelopeId: 'envelope-1',
+      envelopeId: 'envelope_01',
       token: 'recipient-token',
     });
 
