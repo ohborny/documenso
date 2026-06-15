@@ -44,6 +44,16 @@ vi.mock('../../../utils/render-email-with-i18n', () => ({
   renderEmailWithI18N: vi.fn().mockResolvedValue('rendered-email'),
 }));
 
+vi.mock('../../../types/document-audit-logs', () => ({
+  DOCUMENT_AUDIT_LOG_TYPE: {
+    DOCUMENT_ACCESS_AUTH_2FA_REQUESTED: 'DOCUMENT_ACCESS_AUTH_2FA_REQUESTED',
+  },
+}));
+
+vi.mock('../../../utils/document-audit-logs', () => ({
+  createDocumentAuditLogData: vi.fn((data) => data),
+}));
+
 vi.mock('../../email/get-email-context', () => ({
   getEmailContext: vi.fn(),
 }));
