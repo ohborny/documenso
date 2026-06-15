@@ -24,6 +24,16 @@ vi.mock('@documenso/prisma', () => ({
   },
 }));
 
+vi.mock('@documenso/lib/utils/recipients', () => ({
+  isRecipientEmailValidForSending: vi.fn(() => true),
+}));
+
+vi.mock('@prisma/client', () => ({
+  EnvelopeType: {
+    DOCUMENT: 'DOCUMENT',
+  },
+}));
+
 vi.mock('../../../client-only/providers/i18n-server', () => ({
   getI18nInstance: vi.fn().mockResolvedValue({
     _: vi.fn(() => 'Your two-factor authentication code'),
