@@ -86,7 +86,7 @@ describe('send2FATokenEmail', () => {
           name: 'Recipient User',
         },
       ],
-    } as Awaited<ReturnType<typeof prisma.envelope.findFirst>>);
+    } as unknown as Awaited<ReturnType<typeof prisma.envelope.findFirst>>);
 
     vi.mocked(getEmailContext).mockResolvedValue({
       allowedEmails: [],
@@ -108,7 +108,7 @@ describe('send2FATokenEmail', () => {
         brandingEnabled: false,
         documentLanguage: 'en',
       },
-    } as Awaited<ReturnType<typeof getEmailContext>>);
+    } as unknown as Awaited<ReturnType<typeof getEmailContext>>);
 
     vi.mocked(generateTwoFactorTokenFromEmail).mockResolvedValue('123456');
 
