@@ -1,11 +1,12 @@
+import { prisma } from '@documenso/prisma';
 import { seedUser } from '@documenso/prisma/seed/users';
 import { expect, type Page, test } from '@playwright/test';
 
-import { apiSignin } from '../fixtures/authentication';
+import { apiSignin, checkSessionValid } from '../fixtures/authentication';
 import { expectTextToBeVisible } from '../fixtures/generic';
 
 test('[USER] revoke sessions', async ({ page }: { page: Page }) => {
-  const { user, team } = await seedUser();
+  const { user } = await seedUser();
 
   await apiSignin({
     page,
@@ -68,4 +69,31 @@ test('[USER] revoke sessions', async ({ page }: { page: Page }) => {
   await page.getByRole('row').filter({ hasText: 'Current' }).first().getByRole('button', { name: 'Revoke' }).click();
 
   await expect(page).toHaveURL('/signin');
+});
+
+test('[USER] disabled user session is rejected', async ({ page }: { page: Page }) => {
+  const { user } = await seedUser();
+
+  await apiSignin({
+    page,
+    email: user.email,
+    password: 'password',
+    redirectPath: '/settings/security/sessions',
+  });
+
+  await expect(page.getByRole('heading', { name: 'Active sessions' })).toBeVisible();
+
+  await prisma.user.update({
+    where: {
+      id: user.id,
+    },
+    data: {
+      disabled: true,
+    },
+  });
+
+  await page.reload();
+
+  await expect(page).toHaveURL('/signin');
+  await expect(await checkSessionValid(page)).toBe(false);
 });
