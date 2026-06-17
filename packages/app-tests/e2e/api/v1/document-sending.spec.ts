@@ -146,9 +146,7 @@ test.describe('Document API', () => {
     });
   });
 
-  test('sendDocument: should preserve stored recipient email settings for link-only documents', async ({
-    request,
-  }) => {
+  test('sendDocument: should preserve stored recipient email settings for link-only documents', async ({ request }) => {
     const { user, team } = await seedUser();
 
     const { document } = await seedPendingDocumentWithFullFields({
