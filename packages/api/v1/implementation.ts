@@ -27,7 +27,7 @@ import { deleteTemplate } from '@documenso/lib/server-only/template/delete-templ
 import { findTemplates } from '@documenso/lib/server-only/template/find-templates';
 import { getTemplateById } from '@documenso/lib/server-only/template/get-template-by-id';
 import { ZRecipientAuthOptionsSchema } from '@documenso/lib/types/document-auth';
-import { extractDerivedDocumentEmailSettings } from '@documenso/lib/types/document-email';
+import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';
 import {
   ZCheckboxFieldMeta,
   ZDropdownFieldMeta,
@@ -978,7 +978,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
         };
       }
 
-      const emailSettings = extractDerivedDocumentEmailSettings(envelope.documentMeta);
+      const emailSettings = ZDocumentEmailSettingsSchema.parse(envelope.documentMeta?.emailSettings ?? {});
 
       // Update document email settings if sendCompletionEmails is provided
       if (typeof sendCompletionEmails === 'boolean') {
