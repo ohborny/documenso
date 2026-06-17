@@ -2,7 +2,7 @@ import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { createApiToken } from '@documenso/lib/server-only/public-api/create-api-token';
 import { mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
 import { prisma } from '@documenso/prisma';
-import { FieldType, RecipientRole } from '@documenso/prisma/client';
+import { DocumentDistributionMethod, FieldType, RecipientRole } from '@documenso/prisma/client';
 import { seedBlankDocument, seedPendingDocumentWithFullFields } from '@documenso/prisma/seed/documents';
 import { seedUser } from '@documenso/prisma/seed/users';
 import { expect, test } from '@playwright/test';
@@ -143,6 +143,74 @@ test.describe('Document API', () => {
     expect(updatedDocument?.documentMeta?.emailSettings ?? {}).toMatchObject({
       documentCompleted: true,
       ownerDocumentCompleted: false,
+    });
+  });
+
+  test('sendDocument: should preserve stored recipient email settings for link-only documents', async ({ request }) => {
+    const { user, team } = await seedUser();
+
+    const { document } = await seedPendingDocumentWithFullFields({
+      owner: user,
+      recipients: ['signer@example.com'],
+      teamId: team.id,
+    });
+
+    await prisma.documentMeta.update({
+      where: { id: document.documentMetaId },
+      data: {
+        distributionMethod: DocumentDistributionMethod.NONE,
+        emailSettings: {
+          recipientSigningRequest: true,
+          recipientRemoved: true,
+          recipientSigned: true,
+          documentPending: true,
+          documentCompleted: true,
+          documentDeleted: true,
+          ownerDocumentCompleted: true,
+          ownerRecipientExpired: true,
+          ownerDocumentCreated: true,
+        },
+      },
+    });
+
+    const { token } = await createApiToken({
+      userId: user.id,
+      teamId: team.id,
+      tokenName: 'test',
+      expiresIn: null,
+    });
+
+    const response = await request.post(
+      `${NEXT_PUBLIC_WEBAPP_URL()}/api/v1/documents/${mapSecondaryIdToDocumentId(document.secondaryId)}/send`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        data: {
+          sendCompletionEmails: false,
+        },
+      },
+    );
+
+    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
+
+    const updatedDocument = await prisma.envelope.findUnique({
+      where: { id: document.id },
+      include: { documentMeta: true },
+    });
+
+    expect(updatedDocument?.documentMeta?.emailSettings ?? {}).toMatchObject({
+      recipientSigningRequest: true,
+      recipientRemoved: true,
+      recipientSigned: true,
+      documentPending: true,
+      documentCompleted: false,
+      documentDeleted: true,
+      ownerDocumentCompleted: false,
+      ownerRecipientExpired: true,
+      ownerDocumentCreated: true,
     });
   });
 
