@@ -49,6 +49,19 @@ export const createTeamEmailVerification = async ({
       });
     }
 
+    const { emailsDisabled } = await getEmailContext({
+      emailType: 'INTERNAL',
+      trustedDelivery: true,
+      source: {
+        type: 'team',
+        teamId: team.id,
+      },
+    });
+
+    if (emailsDisabled) {
+      return;
+    }
+
     const { token, expiresAt } = createTokenVerification({ hours: 1 });
 
     await prisma.$transaction(async (tx) => {
@@ -116,13 +129,18 @@ export const sendTeamEmailVerificationEmail = async (email: string, token: strin
     token,
   });
 
-  const { branding, emailLanguage, senderEmail, emailTransport } = await getEmailContext({
+  const { branding, emailLanguage, senderEmail, emailsDisabled, emailTransport } = await getEmailContext({
     emailType: 'INTERNAL',
+    trustedDelivery: true,
     source: {
       type: 'team',
       teamId: team.id,
     },
   });
+
+  if (emailsDisabled) {
+    return;
+  }
 
   const [html, text] = await Promise.all([
     renderEmailWithI18N(template, { lang: emailLanguage, branding }),

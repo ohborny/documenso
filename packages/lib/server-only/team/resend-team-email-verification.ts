@@ -3,6 +3,7 @@ import { AppError } from '@documenso/lib/errors/app-error';
 import { createTokenVerification } from '@documenso/lib/utils/token-verification';
 import { prisma } from '@documenso/prisma';
 
+import { getEmailContext } from '../email/get-email-context';
 import { buildTeamWhereQuery } from '../../utils/teams';
 import { sendTeamEmailVerificationEmail } from './create-team-email-verification';
 
@@ -41,6 +42,19 @@ export const resendTeamEmailVerification = async ({
     throw new AppError('VerificationNotFound', {
       message: 'No team email verification exists for this team.',
     });
+  }
+
+  const { emailsDisabled } = await getEmailContext({
+    emailType: 'INTERNAL',
+    trustedDelivery: true,
+    source: {
+      type: 'team',
+      teamId: team.id,
+    },
+  });
+
+  if (emailsDisabled) {
+    return;
   }
 
   const { token, expiresAt } = createTokenVerification({ hours: 1 });

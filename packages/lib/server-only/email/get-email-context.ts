@@ -46,6 +46,15 @@ type BaseGetEmailContextOptions = {
    * - RECIPIENT: Emails to recipients, such as document sent, document signed, etc.
    */
   emailType: 'INTERNAL' | 'RECIPIENT';
+
+  /**
+   * Always deliver through Documenso-controlled mail infrastructure.
+   *
+   * Use this for auth-critical emails that contain bearer secrets, such as
+   * verification tokens or 2FA codes, where tenant-controlled transport logs
+   * must not be able to observe the secret.
+   */
+  trustedDelivery?: boolean;
 };
 
 type InternalGetEmailContextOptions = BaseGetEmailContextOptions & {
@@ -99,6 +108,16 @@ export const getEmailContext = async (options: GetEmailContextOptions): Promise<
   }
 
   const emailLanguage = meta?.language || emailContext.settings.documentLanguage;
+
+  if (options.trustedDelivery) {
+    return {
+      ...emailContext,
+      emailTransport: mailer,
+      senderEmail: DOCUMENSO_INTERNAL_EMAIL,
+      replyToEmail: undefined,
+      emailLanguage,
+    };
+  }
 
   const transportResolution = emailContext.claims.emailTransportId
     ? await resolveEmailTransport(emailContext.claims.emailTransportId)
