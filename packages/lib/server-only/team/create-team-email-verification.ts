@@ -35,7 +35,7 @@ export const createTeamEmailVerification = async ({
       where: buildTeamWhereQuery({
         teamId,
         userId,
-        roles: TEAM_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_TEAM'],
+        roles: TEAM_MEMBER_ROLE_PERMISSIONS_MAP.MANAGE_TEAM,
       }),
       include: {
         teamEmail: true,
@@ -47,6 +47,19 @@ export const createTeamEmailVerification = async ({
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Team already has an email or existing email verification.',
       });
+    }
+
+    const { emailsDisabled } = await getEmailContext({
+      emailType: 'INTERNAL',
+      trustedDelivery: true,
+      source: {
+        type: 'team',
+        teamId: team.id,
+      },
+    });
+
+    if (emailsDisabled) {
+      return;
     }
 
     const { token, expiresAt } = createTokenVerification({ hours: 1 });
@@ -116,13 +129,18 @@ export const sendTeamEmailVerificationEmail = async (email: string, token: strin
     token,
   });
 
-  const { branding, emailLanguage, senderEmail, emailTransport } = await getEmailContext({
+  const { branding, emailLanguage, senderEmail, emailsDisabled, emailTransport } = await getEmailContext({
     emailType: 'INTERNAL',
+    trustedDelivery: true,
     source: {
       type: 'team',
       teamId: team.id,
     },
   });
+
+  if (emailsDisabled) {
+    return;
+  }
 
   const [html, text] = await Promise.all([
     renderEmailWithI18N(template, { lang: emailLanguage, branding }),

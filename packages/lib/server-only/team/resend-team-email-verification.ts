@@ -4,6 +4,7 @@ import { createTokenVerification } from '@documenso/lib/utils/token-verification
 import { prisma } from '@documenso/prisma';
 
 import { buildTeamWhereQuery } from '../../utils/teams';
+import { getEmailContext } from '../email/get-email-context';
 import { sendTeamEmailVerificationEmail } from './create-team-email-verification';
 
 export type ResendTeamMemberInvitationOptions = {
@@ -22,7 +23,7 @@ export const resendTeamEmailVerification = async ({
     where: buildTeamWhereQuery({
       teamId,
       userId,
-      roles: TEAM_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_TEAM'],
+      roles: TEAM_MEMBER_ROLE_PERMISSIONS_MAP.MANAGE_TEAM,
     }),
     include: {
       emailVerification: true,
@@ -41,6 +42,19 @@ export const resendTeamEmailVerification = async ({
     throw new AppError('VerificationNotFound', {
       message: 'No team email verification exists for this team.',
     });
+  }
+
+  const { emailsDisabled } = await getEmailContext({
+    emailType: 'INTERNAL',
+    trustedDelivery: true,
+    source: {
+      type: 'team',
+      teamId: team.id,
+    },
+  });
+
+  if (emailsDisabled) {
+    return;
   }
 
   const { token, expiresAt } = createTokenVerification({ hours: 1 });
