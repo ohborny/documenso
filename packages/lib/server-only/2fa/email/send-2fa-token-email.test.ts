@@ -67,7 +67,7 @@ const recipient = {
 };
 
 const envelope = {
-  id: 'env_123',
+  id: 'envelope_123',
   title: 'Mutual NDA',
   teamId: 123,
   recipients: [recipient],
