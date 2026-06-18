@@ -3,8 +3,8 @@ import { AppError } from '@documenso/lib/errors/app-error';
 import { createTokenVerification } from '@documenso/lib/utils/token-verification';
 import { prisma } from '@documenso/prisma';
 
-import { getEmailContext } from '../email/get-email-context';
 import { buildTeamWhereQuery } from '../../utils/teams';
+import { getEmailContext } from '../email/get-email-context';
 import { sendTeamEmailVerificationEmail } from './create-team-email-verification';
 
 export type ResendTeamMemberInvitationOptions = {
@@ -23,7 +23,7 @@ export const resendTeamEmailVerification = async ({
     where: buildTeamWhereQuery({
       teamId,
       userId,
-      roles: TEAM_MEMBER_ROLE_PERMISSIONS_MAP['MANAGE_TEAM'],
+      roles: TEAM_MEMBER_ROLE_PERMISSIONS_MAP.MANAGE_TEAM,
     }),
     include: {
       emailVerification: true,
