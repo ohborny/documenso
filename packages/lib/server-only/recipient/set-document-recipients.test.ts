@@ -36,6 +36,10 @@ vi.mock('../../client-only/providers/i18n-server', () => ({
   }),
 }));
 
+vi.mock('../../utils/render-email-with-i18n', () => ({
+  renderEmailWithI18N: vi.fn(),
+}));
+
 const createRecipient = (signingStatus: SigningStatus) => ({
   id: 1,
   clientId: null,
