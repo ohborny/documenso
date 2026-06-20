@@ -20,7 +20,10 @@ const createRecipient = (signingStatus: SigningStatus): TRecipientLite =>
     expiresAt: null,
     expirationNotifiedAt: null,
     signedAt: null,
-    authOptions: {},
+    authOptions: {
+      accessAuth: [],
+      actionAuth: [],
+    },
     signingOrder: null,
     rejectionReason: null,
   }) as TRecipientLite;
