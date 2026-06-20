@@ -55,8 +55,8 @@ export const canRecipientBeModified = (
     return true;
   }
 
-  // Deny if the recipient has already signed the document.
-  if (recipient.signingStatus === SigningStatus.SIGNED) {
+  // Deny if the recipient has already completed a terminal signing action.
+  if (recipient.signingStatus === SigningStatus.SIGNED || recipient.signingStatus === SigningStatus.REJECTED) {
     return false;
   }
 
