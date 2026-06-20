@@ -30,6 +30,12 @@ vi.mock('../envelope/get-envelope-by-id', () => ({
   getEnvelopeWhereInput: mocks.getEnvelopeWhereInput,
 }));
 
+vi.mock('../../client-only/providers/i18n-server', () => ({
+  getI18nInstance: vi.fn().mockResolvedValue({
+    _: vi.fn((message) => message),
+  }),
+}));
+
 const createRecipient = (signingStatus: SigningStatus) => ({
   id: 1,
   clientId: null,
