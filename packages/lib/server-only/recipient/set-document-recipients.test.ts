@@ -113,7 +113,11 @@ describe('setDocumentRecipients', () => {
           id: 1,
         },
         recipients: [],
-        requestMetadata: {},
+        requestMetadata: {
+          requestMetadata: {},
+          source: 'app',
+          auth: 'session',
+        },
       }),
     ).rejects.toMatchObject({
       code: AppErrorCode.INVALID_REQUEST,

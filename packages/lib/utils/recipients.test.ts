@@ -1,4 +1,4 @@
-import { RecipientRole, SendStatus, SigningStatus } from '@prisma/client';
+import { ReadStatus, RecipientRole, SendStatus, SigningStatus } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 
 import type { TRecipientLite } from '../types/recipient';
@@ -11,7 +11,7 @@ const createRecipient = (signingStatus: SigningStatus): TRecipientLite =>
     signingStatus,
     sendStatus: SendStatus.SENT,
     envelopeId: 'envelope-1',
-    readStatus: null,
+    readStatus: ReadStatus.NOT_OPENED,
     email: 'recipient@example.com',
     name: 'Recipient',
     token: 'token',
