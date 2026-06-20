@@ -116,6 +116,16 @@ export const setDocumentRecipients = async ({
     (existingRecipient) => !normalizedRecipients.find((recipient) => recipient.id === existingRecipient.id),
   );
 
+  const removedImmutableRecipient = removedRecipients.find(
+    (recipient) => !canRecipientBeModified(recipient, envelope.fields),
+  );
+
+  if (removedImmutableRecipient) {
+    throw new AppError(AppErrorCode.INVALID_REQUEST, {
+      message: 'Cannot remove a recipient who has already interacted with the document',
+    });
+  }
+
   const linkedRecipients = normalizedRecipients.map((recipient) => {
     const existing = existingRecipients.find((existingRecipient) => existingRecipient.id === recipient.id);
 
