@@ -1,8 +1,8 @@
 import { mailer } from '@documenso/email/mailer';
-import { DOCUMENSO_INTERNAL_EMAIL } from '../../../constants/email';
 import { prisma } from '@documenso/prisma';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DOCUMENSO_INTERNAL_EMAIL } from '../../../constants/email';
 import { getEmailContext } from '../../email/get-email-context';
 import { generateTwoFactorTokenFromEmail } from './generate-2fa-token-from-email';
 import { send2FATokenEmail } from './send-2fa-token-email';
@@ -43,6 +43,12 @@ vi.mock('@documenso/prisma', () => ({
   },
 }));
 
+vi.mock('@prisma/client', () => ({
+  EnvelopeType: {
+    DOCUMENT: 'DOCUMENT',
+  },
+}));
+
 vi.mock('@lingui/core/macro', () => ({
   msg: (strings: TemplateStringsArray) => strings[0],
 }));
@@ -53,6 +59,12 @@ vi.mock('../../../client-only/providers/i18n-server', () => ({
 
 vi.mock('../../../constants/app', () => ({
   NEXT_PUBLIC_WEBAPP_URL: () => 'https://app.example.com',
+}));
+
+vi.mock('../../../types/document-audit-logs', () => ({
+  DOCUMENT_AUDIT_LOG_TYPE: {
+    DOCUMENT_ACCESS_AUTH_2FA_REQUESTED: 'DOCUMENT_ACCESS_AUTH_2FA_REQUESTED',
+  },
 }));
 
 vi.mock('../../../utils/document-audit-logs', () => ({
