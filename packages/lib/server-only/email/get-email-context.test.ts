@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AppError, AppErrorCode } from '../../errors/app-error';
+import { type AppError, AppErrorCode } from '../../errors/app-error';
 
 const mockPrisma = vi.hoisted(() => ({
   organisation: {
