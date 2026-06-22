@@ -104,15 +104,15 @@ export const getEmailContext = async (options: GetEmailContextOptions): Promise<
     ? await resolveEmailTransport(emailContext.claims.emailTransportId)
     : null;
 
-  // A configured transport that fails to resolve is an operational problem, not
-  // "no transport". Surface it (alertable) before silently falling back to the
-  // system mailer + Documenso sender, so the degraded organisation is findable.
   if (emailContext.claims.emailTransportId && !transportResolution) {
-    // Todo: Logging
     logger.error({
-      msg: 'Configured email transport could not be resolved; falling back to the system mailer',
+      msg: 'Configured email transport could not be resolved',
       emailTransportId: emailContext.claims.emailTransportId,
       organisationId: emailContext.organisationId,
+    });
+
+    throw new AppError(AppErrorCode.UNKNOWN_ERROR, {
+      message: 'Configured email transport could not be resolved',
     });
   }
 
