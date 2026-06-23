@@ -29,7 +29,7 @@ import type { JobRunIO } from '../../client/_internal/job';
 import type { TSendSigningEmailJobDefinition } from './send-signing-email';
 
 export const run = async ({ payload, io }: { payload: TSendSigningEmailJobDefinition; io: JobRunIO }) => {
-  const { userId, documentId, recipientId, requestMetadata } = payload;
+  const { userId, documentId, recipientId, requestMetadata, areOrganisationEmailLimitsReserved } = payload;
 
   const [user, envelope, recipient] = await Promise.all([
     prisma.user.findFirstOrThrow({
@@ -186,23 +186,25 @@ export const run = async ({ payload, io }: { payload: TSendSigningEmailJobDefini
   });
 
   if (isRecipientEmailValidForSending(recipient)) {
-    try {
-      await assertOrganisationRatesAndLimits({
-        organisationId,
-        organisationClaim: claims,
-        type: 'email',
-        count: 1,
-      });
-    } catch (_err) {
-      io.logger.warn({
-        msg: 'Recipient signing email dropped: org rate limit exceeded',
-        organisationId,
-        recipientId: recipient.id,
-        envelopeId: envelope.id,
-      });
+    if (!areOrganisationEmailLimitsReserved) {
+      try {
+        await assertOrganisationRatesAndLimits({
+          organisationId,
+          organisationClaim: claims,
+          type: 'email',
+          count: 1,
+        });
+      } catch (_err) {
+        io.logger.warn({
+          msg: 'Recipient signing email dropped: org rate limit exceeded',
+          organisationId,
+          recipientId: recipient.id,
+          envelopeId: envelope.id,
+        });
 
-      // Job is consumed and NOT retried.
-      return;
+        // Job is consumed and NOT retried.
+        return;
+      }
     }
 
     await io.runTask('send-signing-email', async () => {

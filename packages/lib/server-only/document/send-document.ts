@@ -4,7 +4,7 @@ import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-reques
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
 import { checkboxValidationSigns } from '@documenso/ui/primitives/document-flow/field-items-advanced-settings/constants';
-import type { DocumentData, Envelope, EnvelopeItem, Field, Recipient } from '@prisma/client';
+import type { DocumentData, DocumentMeta, Envelope, EnvelopeItem, Field, Recipient } from '@prisma/client';
 import {
   DocumentSigningOrder,
   DocumentStatus,
@@ -37,8 +37,10 @@ import { extractDocumentAuthMethods } from '../../utils/document-auth';
 import { type EnvelopeIdOptions, mapSecondaryIdToDocumentId } from '../../utils/envelope';
 import { toCheckboxCustomText, toRadioCustomText } from '../../utils/fields';
 import { getRecipientsWithMissingFields, isRecipientEmailValidForSending } from '../../utils/recipients';
+import { getEmailContext } from '../email/get-email-context';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { insertFormValuesInPdf } from '../pdf/insert-form-values-in-pdf';
+import { assertOrganisationRatesAndLimits } from '../rate-limit/assert-organisation-rates-and-limits';
 import { assertUserNotDisabledById } from '../user/assert-user-not-disabled';
 import { triggerWebhook } from '../webhooks/trigger/trigger-webhook';
 
@@ -48,6 +50,59 @@ export type SendDocumentOptions = {
   teamId: number;
   sendEmail?: boolean;
   requestMetadata: ApiRequestMetadata;
+};
+
+type SigningRequestEmailRecipient = Pick<Recipient, 'email' | 'role' | 'sendStatus'>;
+
+type ReserveSigningRequestEmailLimitsOptions = {
+  teamId: number;
+  documentMeta: Pick<DocumentMeta, 'emailId' | 'emailReplyTo' | 'language'> | null | undefined;
+  recipients: SigningRequestEmailRecipient[];
+};
+
+export const getSigningRequestEmailRecipients = (recipients: SigningRequestEmailRecipient[]) =>
+  recipients.filter(
+    (recipient) =>
+      recipient.sendStatus !== SendStatus.SENT &&
+      recipient.role !== RecipientRole.CC &&
+      isRecipientEmailValidForSending(recipient),
+  );
+
+export const reserveSigningRequestEmailLimits = async ({
+  teamId,
+  documentMeta,
+  recipients,
+}: ReserveSigningRequestEmailLimitsOptions) => {
+  const recipientsRequiringEmailLimit = getSigningRequestEmailRecipients(recipients);
+
+  if (recipientsRequiringEmailLimit.length === 0) {
+    return false;
+  }
+
+  const { organisationId, claims, emailsDisabled } = await getEmailContext({
+    emailType: 'RECIPIENT',
+    source: {
+      type: 'team',
+      teamId,
+    },
+    meta: documentMeta,
+  });
+
+  if (emailsDisabled) {
+    throw new AppError(AppErrorCode.FORBIDDEN, {
+      message: 'Email sending is disabled for this organisation',
+      statusCode: 403,
+    });
+  }
+
+  await assertOrganisationRatesAndLimits({
+    organisationId,
+    organisationClaim: claims,
+    count: recipientsRequiringEmailLimit.length,
+    type: 'email',
+  });
+
+  return true;
 };
 
 export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetadata }: SendDocumentOptions) => {
@@ -225,6 +280,24 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
     }
   }
 
+  const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
+    envelope.documentMeta,
+  ).recipientSigningRequest;
+
+  // Only send email if one of the following is true:
+  // - It is explicitly set
+  // - The email is enabled for signing requests AND sendEmail is undefined
+  const shouldSendSigningRequestEmail = sendEmail || (isRecipientSigningRequestEmailEnabled && sendEmail === undefined);
+  let areOrganisationEmailLimitsReserved = false;
+
+  if (shouldSendSigningRequestEmail) {
+    areOrganisationEmailLimitsReserved = await reserveSigningRequestEmailLimits({
+      teamId,
+      documentMeta: envelope.documentMeta,
+      recipients: recipientsToNotify,
+    });
+  }
+
   const updatedEnvelope = await prisma.$transaction(async (tx) => {
     if (envelope.status === DocumentStatus.DRAFT) {
       await tx.documentAuditLog.create({
@@ -305,14 +378,7 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
     });
   });
 
-  const isRecipientSigningRequestEmailEnabled = extractDerivedDocumentEmailSettings(
-    envelope.documentMeta,
-  ).recipientSigningRequest;
-
-  // Only send email if one of the following is true:
-  // - It is explicitly set
-  // - The email is enabled for signing requests AND sendEmail is undefined
-  if (sendEmail || (isRecipientSigningRequestEmailEnabled && sendEmail === undefined)) {
+  if (shouldSendSigningRequestEmail) {
     await Promise.all(
       recipientsToNotify.map(async (recipient) => {
         if (recipient.sendStatus === SendStatus.SENT || recipient.role === RecipientRole.CC) {
@@ -326,6 +392,7 @@ export const sendDocument = async ({ id, userId, teamId, sendEmail, requestMetad
             documentId: legacyDocumentId,
             recipientId: recipient.id,
             requestMetadata: requestMetadata?.requestMetadata,
+            areOrganisationEmailLimitsReserved,
           },
         });
       }),
@@ -389,7 +456,7 @@ export const extractFieldAutoInsertValues = (
 
   if (parsedField.error) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
-      message: 'One or more fields have invalid metadata. Error: ' + parsedField.error.message,
+      message: `One or more fields have invalid metadata. Error: ${parsedField.error.message}`,
     });
   }
 
