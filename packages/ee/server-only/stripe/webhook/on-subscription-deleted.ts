@@ -31,11 +31,11 @@ export const onSubscriptionDeleted = async ({ subscription }: OnSubscriptionDele
 
   const subscriptionClaimId = await extractClaimIdFromStripeSubscription(subscription);
 
+  const freeSubscriptionClaim = await getSubscriptionClaim(INTERNAL_CLAIM_ID.FREE);
+
   // Individuals get their subscription deleted so they can return to the
   // free plan.
   if (subscriptionClaimId === INTERNAL_CLAIM_ID.INDIVIDUAL) {
-    const freeSubscriptionClaim = await getSubscriptionClaim(INTERNAL_CLAIM_ID.FREE);
-
     await prisma.$transaction(async (tx) => {
       await tx.subscription.delete({
         where: {
@@ -59,13 +59,25 @@ export const onSubscriptionDeleted = async ({ subscription }: OnSubscriptionDele
 
   // For all other cases, mark the subscription as inactive since
   // they should still have a "Personal" account.
-  await prisma.subscription.update({
-    where: {
-      id: existingSubscription.id,
-    },
-    data: {
-      status: SubscriptionStatus.INACTIVE,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.subscription.update({
+      where: {
+        id: existingSubscription.id,
+      },
+      data: {
+        status: SubscriptionStatus.INACTIVE,
+      },
+    });
+
+    await tx.organisationClaim.update({
+      where: {
+        id: existingSubscription.organisation.organisationClaim.id,
+      },
+      data: {
+        originalSubscriptionClaimId: INTERNAL_CLAIM_ID.FREE,
+        ...createOrganisationClaimUpsertData(freeSubscriptionClaim),
+      },
+    });
   });
 };
 

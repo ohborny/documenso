@@ -44,10 +44,12 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
       });
     }
 
+    const sourceSubscription = sourceOrg.subscription;
+
     if (
-      !sourceOrg.subscription ||
-      (sourceOrg.subscription.status !== SubscriptionStatus.ACTIVE &&
-        sourceOrg.subscription.status !== SubscriptionStatus.PAST_DUE)
+      !sourceSubscription ||
+      (sourceSubscription.status !== SubscriptionStatus.ACTIVE &&
+        sourceSubscription.status !== SubscriptionStatus.PAST_DUE)
     ) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Source organisation does not have an active subscription',
@@ -84,7 +86,7 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
       });
     }
 
-    const customerId = sourceOrg.customerId ?? sourceOrg.subscription.customerId;
+    const customerId = sourceOrg.customerId ?? sourceSubscription.customerId;
 
     const freeSubscriptionClaim = await getSubscriptionClaim(INTERNAL_CLAIM_ID.FREE);
 
@@ -110,7 +112,7 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
 
       // Move the subscription record to the target org.
       await tx.subscription.update({
-        where: { id: sourceOrg.subscription!.id },
+        where: { id: sourceSubscription.id },
         data: { organisationId: targetOrganisationId },
       });
 
@@ -120,11 +122,7 @@ export const swapOrganisationSubscriptionRoute = adminProcedure
           where: { id: targetOrg.organisationClaim.id },
           data: {
             originalSubscriptionClaimId: sourceOrg.organisationClaim.originalSubscriptionClaimId,
-            teamCount: sourceOrg.organisationClaim.teamCount,
-            memberCount: sourceOrg.organisationClaim.memberCount,
-            envelopeItemCount: sourceOrg.organisationClaim.envelopeItemCount,
-            recipientCount: sourceOrg.organisationClaim.recipientCount,
-            flags: sourceOrg.organisationClaim.flags,
+            ...createOrganisationClaimUpsertData(sourceOrg.organisationClaim),
           },
         });
       }
