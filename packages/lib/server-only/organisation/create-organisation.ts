@@ -10,6 +10,9 @@ import { INTERNAL_CLAIM_ID } from '../../types/subscription';
 import { generateDatabaseId, prefixedId } from '../../universal/id';
 import { generateDefaultOrganisationSettings } from '../../utils/organisations';
 import { createTeam } from '../team/create-team';
+import { createOrganisationClaimUpsertData } from './create-organisation-claim-upsert-data';
+
+export { createOrganisationClaimUpsertData } from './create-organisation-claim-upsert-data';
 
 type CreateOrganisationOptions = {
   userId: number;
@@ -184,31 +187,4 @@ export const createPersonalOrganisation = async ({
   }
 
   return organisation;
-};
-
-export const createOrganisationClaimUpsertData = (
-  subscriptionClaim: Omit<SubscriptionClaim, 'createdAt' | 'updatedAt'>,
-) => {
-  // Done like this to ensure type errors are thrown if items are added.
-  const data: Omit<Prisma.SubscriptionClaimUncheckedCreateInput, 'id' | 'createdAt' | 'updatedAt' | 'locked' | 'name'> =
-    {
-      flags: {
-        ...subscriptionClaim.flags,
-      },
-      envelopeItemCount: subscriptionClaim.envelopeItemCount,
-      recipientCount: subscriptionClaim.recipientCount,
-      teamCount: subscriptionClaim.teamCount,
-      memberCount: subscriptionClaim.memberCount,
-      documentRateLimits: subscriptionClaim.documentRateLimits ?? [],
-      documentQuota: subscriptionClaim.documentQuota,
-      emailRateLimits: subscriptionClaim.emailRateLimits ?? [],
-      emailQuota: subscriptionClaim.emailQuota,
-      apiRateLimits: subscriptionClaim.apiRateLimits ?? [],
-      apiQuota: subscriptionClaim.apiQuota,
-      emailTransportId: subscriptionClaim.emailTransportId ?? null,
-    };
-
-  return {
-    ...data,
-  };
 };

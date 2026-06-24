@@ -1,5 +1,6 @@
 import { createOrganisationClaimUpsertData } from '@documenso/lib/server-only/organisation/create-organisation';
 import { type Stripe, stripe } from '@documenso/lib/server-only/stripe';
+import { getSubscriptionClaim } from '@documenso/lib/server-only/subscription/get-subscription-claim';
 import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
 import { prisma } from '@documenso/prisma';
 import { OrganisationType, SubscriptionStatus } from '@prisma/client';
@@ -9,10 +10,11 @@ export type OnSubscriptionUpdatedOptions = {
   subscription: Stripe.Subscription;
   previousAttributes: Partial<Stripe.Subscription> | null;
   /**
-   * When true, the organisationClaim will not be synced.
+   * When true, active organisationClaim plan changes will not be synced.
    *
    * Used by the admin sync route to update only the Subscription
-   * row while leaving claim entitlements untouched.
+   * row while leaving claim entitlements untouched. Inactive subscriptions
+   * are always downgraded to the free claim.
    */
   bypassClaimUpdate?: boolean;
 };
@@ -101,6 +103,9 @@ export const onSubscriptionUpdated = async ({
       ? new Date(subscription.trial_end * 1000)
       : new Date(subscription.current_period_end * 1000);
 
+  const freeSubscriptionClaim =
+    status === SubscriptionStatus.INACTIVE ? await getSubscriptionClaim(INTERNAL_CLAIM_ID.FREE) : null;
+
   // Migrate the organisation type if it is no longer an individual plan.
   if (
     updatedSubscriptionClaim.id !== INTERNAL_CLAIM_ID.INDIVIDUAL &&
@@ -118,11 +123,20 @@ export const onSubscriptionUpdated = async ({
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.subscription.update({
+    await tx.subscription.upsert({
       where: {
         organisationId: organisation.id,
       },
-      data: {
+      create: {
+        organisationId: organisation.id,
+        customerId,
+        status: status,
+        planId: subscription.id,
+        priceId: subscription.items.data[0].price.id,
+        periodEnd,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      },
+      update: {
         status: status,
         planId: subscription.id,
         priceId: subscription.items.data[0].price.id,
@@ -133,7 +147,17 @@ export const onSubscriptionUpdated = async ({
 
     // Override current organisation claim if new one is found.
     // Skipped when bypassClaimUpdate is set.
-    if (!bypassClaimUpdate && newClaimFound) {
+    if (freeSubscriptionClaim) {
+      await tx.organisationClaim.update({
+        where: {
+          id: organisation.organisationClaim.id,
+        },
+        data: {
+          originalSubscriptionClaimId: INTERNAL_CLAIM_ID.FREE,
+          ...createOrganisationClaimUpsertData(freeSubscriptionClaim),
+        },
+      });
+    } else if (!bypassClaimUpdate && newClaimFound) {
       await tx.organisationClaim.update({
         where: {
           id: organisation.organisationClaim.id,

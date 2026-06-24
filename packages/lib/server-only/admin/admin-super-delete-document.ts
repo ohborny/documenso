@@ -44,7 +44,7 @@ export const adminSuperDeleteDocument = async ({ envelopeId, requestMetadata }: 
     });
   }
 
-  const { branding, settings, senderEmail, replyToEmail, emailTransport } = await getEmailContext({
+  const { branding, settings, senderEmail, replyToEmail, emailsDisabled, emailTransport } = await getEmailContext({
     emailType: 'RECIPIENT',
     source: {
       type: 'team',
@@ -60,7 +60,12 @@ export const adminSuperDeleteDocument = async ({ envelopeId, requestMetadata }: 
   const recipientsToNotify = envelope.recipients.filter((recipient) => isRecipientEmailValidForSending(recipient));
 
   // if the document is pending, send cancellation emails to all recipients
-  if (status === DocumentStatus.PENDING && recipientsToNotify.length > 0 && isDocumentDeletedEmailEnabled) {
+  if (
+    status === DocumentStatus.PENDING &&
+    recipientsToNotify.length > 0 &&
+    isDocumentDeletedEmailEnabled &&
+    !emailsDisabled
+  ) {
     await Promise.all(
       recipientsToNotify.map(async (recipient) => {
         if (recipient.sendStatus !== SendStatus.SENT) {
