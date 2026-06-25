@@ -101,6 +101,19 @@ export const run = async ({ payload, io }: { payload: TProcessSigningReminderJob
     return;
   }
 
+  const updateNextReminder = async () => {
+    if (!recipient.sentAt) {
+      return;
+    }
+
+    await updateRecipientNextReminder({
+      recipientId: recipient.id,
+      envelopeId: envelope.id,
+      sentAt: recipient.sentAt,
+      lastReminderSentAt: now,
+    });
+  };
+
   const {
     branding,
     emailLanguage,
@@ -124,6 +137,7 @@ export const run = async ({ payload, io }: { payload: TProcessSigningReminderJob
   // has email sending disabled.
   if (envelope.user.disabled || emailsDisabled) {
     io.logger.info(`Envelope ${envelope.id} skipping reminder: owner disabled or organisation emails disabled`);
+    await updateNextReminder();
     return;
   }
 
@@ -244,12 +258,5 @@ export const run = async ({ payload, io }: { payload: TProcessSigningReminderJob
   }
 
   // Compute the next reminder time (repeat interval).
-  if (recipient.sentAt) {
-    await updateRecipientNextReminder({
-      recipientId: recipient.id,
-      envelopeId: envelope.id,
-      sentAt: recipient.sentAt,
-      lastReminderSentAt: now,
-    });
-  }
+  await updateNextReminder();
 };
