@@ -27,6 +27,10 @@ vi.mock('@documenso/prisma', () => ({
   },
 }));
 
+vi.mock('../../../constants/recipient-roles', () => ({
+  RECIPIENT_ROLES_DESCRIPTION: {},
+}));
+
 vi.mock('../../../client-only/providers/i18n-server', () => ({
   getI18nInstance: vi.fn(),
 }));
