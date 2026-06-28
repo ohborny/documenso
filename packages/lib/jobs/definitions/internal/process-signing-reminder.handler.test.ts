@@ -57,6 +57,10 @@ vi.mock('../../../types/document-email', () => ({
   }),
 }));
 
+vi.mock('../../../utils/render-email-with-i18n', () => ({
+  renderEmailWithI18N: vi.fn(),
+}));
+
 const createIo = () => ({
   logger: {
     info: vi.fn(),
